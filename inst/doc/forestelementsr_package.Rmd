@@ -1,0 +1,856 @@
+---
+title: "The Package ForestElementsR"
+author: "Peter Biber and Astor Toraño Caicoya"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+vignette: >
+  %\VignetteIndexEntry{The Package ForestElementsR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: REFERENCES.bib  
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message = FALSE}
+library(ForestElementsR) # Attach ForestElementsR
+
+# Other packages required in the code examples below
+library(dplyr)
+library(ggplot2)
+library(purrr)
+```
+
+## 1 Introduction
+Many methods from the fields of forest growth and yield, as well as forest 
+inventory, that belong to the core contents of forest related education were not 
+widely available in a contemporary form so far. To cover this deficit and to 
+continue doing so in the long run is the driving idea behind the creation and 
+development of the package *ForestElementsR*. The concept of the package is mainly 
+based on experiences and procedures made and developed at the former Chair of Forest 
+Growth and Yield at the Technical University of Munich. Therefore, the method 
+and object collection covered by the current version of *ForestElementsR* is 
+slightly biased towards German and Bavarian conditions. This is, however, not 
+intended to be a limitation for the the package's future development. For this 
+reason - too much pre-definition leads to restriction - *ForestElementsR* does 
+not provide readily defined workflows. It does, in contrast, offer a collection 
+of elementary (hence the name of the package) building blocks that can be 
+combined into any workflow required by users for their specific requirements. If
+you are a developer, feel encouraged to use the methods and objects provided by 
+*ForestElementsR* in your own forest-related R packages, e.g. for evaluating 
+specific types of forest inventories, research plots, or the output of forest 
+growth models. This is exactly what we, the authors of *ForestElementsR*, are 
+currently using the package for.
+
+Most of the functionality we provide with the package is focused on producing
+information that is typically connected to the fields of forest growth and
+yield, forest mensuration, and forest inventory. Therefore, there is a certain
+bias towards goal variables which are related to the production of wood in one
+way or the other. However, even data from classic forest surveys can be 
+evaluated in many ways that allow conclusions about forest structure and 
+diversity. A few such methods are implemented in the current version of
+*ForestElementsR*, and we intend to add more in the future. We deem this 
+important, because such approaches make a better use of forest data with regard
+to multifunctional forest management and planning.
+
+It is an important design requirement of *ForestElementsR* not to be just a 
+conglomerate of functions and objects that exist independently of each other. We
+hope users will see overarching concepts when they find similarities in the 
+naming of our functions and objects, and the composition of function calls. 
+Other, even more important bundling features are the package's open 
+[Species Coding System](#spec_codes) and the hierarchically organized family of
+[objects that represent (samples from) forest stands](#fe_stand_objects)
+
+With *ForestElementsR* we would like to address a broad audience. 
+**Practitioners** might want to apply it for many purposes from using single 
+functions in a "forest pocket calculator" style to evaluate forest stand surveys 
+by arranging functions in a workchain way. **Scientists** will hopefully find 
+the package useful for carrying out routine evaluations of forest data (like 
+volume estimates, site indexing) that are regular prerequisites for in-dephth 
+scientific analyzes. **Students** could profit from applying *ForestElementR*'s
+functionality to the extensive set of example data that comes with the package.
+We are confident that this would help them to develop an understanding and 
+intuition about quantitative key methods in forestry as well as about the
+quantities themselves.
+
+We should add that, besides our own developments, we also have quite shamelessly
+implemented methods developed and published by other authors that have proven 
+themselves useful in our daily work. We have tried our best to find and cite the
+original publications correctly in order to give credit to whom it belongs.
+
+<div style="border: 2px solid #0073e6; padding: 10px; border-radius: 5px; 
+background-color: #f9f9f9;">
+  Before we proceed, let us put out an **Important Warning**:
+  While the functions and objects we provide with *ForestElemensR* behave 
+  exactly as described in the documentation, professional training in the fields 
+  of forestry, forest management, forest science is required to apply them 
+  correctly and to understand what their output actually means. If you are a
+  hobby forester, you are more than welcome to make use of this package, but 
+  be sure to consult a professional before you draw important conclusions from
+  what you get out of your evaluations. We also would like to point out another 
+  trivial wisdom that, however, seems to be ignored on a regular basis: 
+  *If your data are bad, don't expect to get good results.*
+</div>
+
+\
+In the following sections we give an overview about the most important features
+of *ForestElementsR*. We do not delve deeply into all details as these can be
+taken from the specific documentations provided for each function. For two major 
+features, namely the [species coding system](tree_species_codings.html), and the
+representation of [yield tables](yield_tables.html), we provide their own
+vignettes.
+
+
+## 2 Object Families {#object_families}
+*ForestElementsR* comprises three main families of 
+[S3](https://adv-r.hadley.nz/s3.html) objects that are intended to facilitate 
+the users' as well as the developers' lives. These relate to the 
+[representations of forest plots and stands](#fe_stand_objects), the 
+[species coding system](#spec_codes), and *ForestElementR*'s 
+[yield table implementation](#ytab).
+
+### 2.1 Representations of Plots and Stands {#fe_stand_objects}
+The basic and most versatile class for representing plots or stands is 
+```fe_stand```. For how to make such an object from data call the documentation 
+```?fe_stand```. As each tree in an fe_stand object can have its own 
+representation number (i.e. an information about how many trees it represents
+per ha), it can represent (a cutout from) a forest stand as well as any kind of
+sample with varying representation like, e.g., angle count samples (where the
+representation number of a tree depends on its dbh) or n-tree samples (where
+typically, the outermost tree is only half represented). Also a concentric circle
+based design can be represented; however, we provide specialized objects for 
+these. Let's have a closer look at such an object:
+
+```{r}
+# spruce_beech_1_fe_stand is one of the included example objects, 
+# for an overview, type "?example_data"
+spruce_beech_1_fe_stand
+                        
+```
+
+An fe_stand object is evidently a list-like object; its most important element
+is the data frame (tibble) "trees", which contains all trees that were measured
+individually and have a dbh. Note, that the element *small_trees* is 
+still experimental and not yet used by any function we provide with 
+*ForestElementsR*. It is intended to, in the future, provide a technical home 
+for trees so small that they do not have a dbh (i.e. trees with heights < 1.3 m) 
+or are under the size threshold for being measured individually, but are counted 
+in size classes. Due to the multitude existing approaches, we haven't decided on
+a representation in fe_stand objects, yet. The only current requirement for the 
+small_trees element is that it has to be a data frame. In our example above, 
+this data frame is empty. We have written fe_stand versions for the S3 generic
+functions *summary* and *plot*:
+
+
+```{r, fig.dim=c(4.9, 2.8), fig.align="center"}
+oo <- options(fe_spec_lang = "eng")  # display species names in English
+
+spruce_beech_1_fe_stand |> summary() # Give a summary of stand-level values
+spruce_beech_1_fe_stand |> plot()    # Make an appropriate plot
+                                     
+options(oo)                          # Reset species name display option
+```
+
+If spatial information about the location of the stand (sample) and/or the 
+single trees is available, the class ```fe_stand_spatial``` can be used. It is
+a child of fe_stand. All spatial functionality is taken from the package 
+[sf](https://CRAN.R-project.org/package=sf), therefore, fe_stand_spatial 
+accepts a broad range of coordinate definitions, from simple cartesian 
+coordinates to more or less all common geocoordinate definitions. The output
+of ```summary``` and ```plot``` for such an object is virtually the same as for
+its parent class ```fe_stand```:
+
+```{r, fig.dim=c(6.3, 3.6), fig.align="center"}
+oo <- options(fe_spec_lang = "sci")       # display scientific species names
+
+# Example: A mixed mountain forest plot in the Bavarian Alps;
+# for an overview, type "?example_data"
+mm_forest_1_fe_stand_spatial |> summary() # Give a summary of stand-level values
+mm_forest_1_fe_stand_spatial |> plot()    # Make an appropriate plot
+                                     
+options(oo)                               # Reset species name display option
+```
+
+However, the spatial information about the outline of the stand (plot) and the 
+positions of the trees can also be accessed graphically. In our example, the 
+object represents a rectangular research plot where the coordinates are not
+geolocated:
+
+```{r, fig.dim=c(4.9, 3.6), fig.align="center"}
+mm_forest_1_fe_stand_spatial$outline |> 
+  ggplot() +
+  geom_sf(fill = NA) +
+  geom_sf(data = mm_forest_1_fe_stand_spatial$tree_positions) +
+  xlab("x (m)") + ylab("y (m)")
+
+```
+
+An important special child of ```fe_stand_spatial``` is ´the 
+```fe_ccircle_spatial``` object. It is a generic container for sample plots with
+a concentric circle design. A multitude of such objects can be used for
+representing entire sample forest inventories. The latter is actually the 
+intended use of ```fe_ccircle_spatial``` which can be done e.g. in R packages 
+that build up on *ForestElementsR*. The ```summary``` and ```plot``` functions 
+are also available for these objects:
+
+
+```{r, fig.dim=(c(4.9, 4.9)), fig.align="center"}
+oo <- options(fe_spec_lang = "ger") # display German species names
+
+spruce_pine_ccircle_spatial |> summary()
+spruce_pine_ccircle_spatial |> plot(dbh_scale = 3) # oversize dbh x3
+
+options(oo)        # Reset species name display option
+```
+
+We provide user friendly functions for generating all the objects described 
+above. These functions have the same name as the class of the object to be 
+created. E.g. with ```fe_stand()``` you can generate an object of class 
+```fe_stand``` from your own data. This will only be successful if the candidate
+object passes a validation that makes sure it is not ill-defined. For details, 
+check the documentations of the functions ```fe_stand()```, 
+```fe_stand_spatial()```, ```fe_ccircle_spatial()```, and 
+```fe_ccircle_spatial_notrees()``` (a class designed for special cases e.g, 
+permanent forest inventory samples where one plot does not have any trees at a
+given inventory period).
+
+
+### 2.2 Species Coding System {#spec_codes}
+Unfortunately, the different forest research institutions in Central Europa are
+typically using different tree species codings, which are typically not
+or only partly compatible with each other. This creates considerable friction
+e.g. in cross sectional analyses of data that come from different institutions.
+Therefore, *ForestElementsR* comes with a generic open species coding system 
+that allows to cast between different codings. As we provide its own 
+[vignette](tree_species_codings.html), which covers this species coding system 
+in detail, we give only an outline here. 
+
+The system is designed in a way that coding casts work as long as there is no 
+logical problem in the specific situation to solve, even when the two codings of
+interest are not entirely compatible. That means, e.g., when incompatibilities
+between two codings exist for very uncommon species or species groups only, they
+will not hamper the majority of casts. When a species coding cast loses 
+information, a warning will be issued, but the cast will be executed. This is 
+the case when a species cast leads from an individually coded species in the 
+original coding into a species group code in the goal coding. Currently, six 
+species codings are implemented in *ForestElementsR*. Five of them are codings 
+that are in use in practice, probably most prominently the coding of the German 
+National Forest Inventory [@bwi3_methods_2017]. All specific codings are linked 
+to an internal master coding, which guarantees consistency. While the authors 
+have a faint hope that this master coding could eventually become a common 
+standard, they are also realists and understand the longevity of traditions.
+
+Many functions in *ForestElementsR* that utilize species codings, e.g.
+the volume function ```v_gri()```, will try to convert any given species coding
+into the most similar supported one for which parameters are available. In this 
+way, useful functions that were originally developed at one institution and are 
+therefore compatible with a specific species coding, become more widely 
+applicable without forcing users to do tedious technical pull-ups beforehand. 
+When examining the code examples in the [previous section](#fe_stand_objects), 
+you may have noticed that R's ```options()``` mechanism is used there to select
+the language which is used to display species names. Let us demonstrate this 
+here again:
+
+```{r}
+# Define a vector of species ids compatible with the coding used by the 
+# Bavarian Forest Service
+species_ids <- as_fe_species_bavrn_state(c(10, 20, 21, 24, 68, 62, 60))
+# How they are displayed depends on the current setting of the option
+# fe_spec_lang
+species_ids
+# Check the option
+options("fe_spec_lang") # if NULL or "code" the number codes are displayed
+# Set to English (and keep the prevous option settings in oo)
+oo <- options(fe_spec_lang = "eng")
+species_ids
+# Set to scientific names
+options(fe_spec_lang = "sci")
+species_ids
+# Set to German
+options(fe_spec_lang = "ger")
+species_ids
+# Set to codes
+options(fe_spec_lang = "code")
+species_ids
+# Reset to the previous setting before enforcing English
+options(oo)
+```
+
+See the vignette 
+[Tree Species Codings in ForestElementsR](tree_species_codings.html) for an 
+in-detail description of the species coding system of *ForestElementsR*
+
+
+### 2.3 Yield Tables {#ytab}
+Yield tables might be the most important tools forest science has ever provided
+to forest practice. They represent an invaluable wealth of empirical data that
+has been condensed into tabular descriptions of forest stand growth that are 
+easy to work with. For about three decades, however, they have been 
+increasingly frowned upon for several reason, including  their limited 
+applicability to mixed species stands, their inherent restriction to even aged 
+stands only, and  their representation of forest growth under environmental 
+conditions that have since changed, and cannot be considered as stable as 
+they were when the data behind the tables were collected.Nevertheless, when 
+handled wisely, yield tables can still be highly valuable assets in our tool 
+kit. Therefore, we developed a generic implementation of 
+yield tables in *ForestElementsR* that is designed to work equally well with 
+yield tables of different origin with different specifications and descriptive 
+variables. An initial collection of yield tables for important tree species in 
+Central Europe has already been implemented and comes readily with 
+*ForestElements*; this collection will certainly keep growing. Currently, it
+covers the yield tables contained in @hilfstafeln_bavaria_1990. All readily 
+available tables are listed in the *ForestElementsR*'s documentation. You can 
+look them up with ```?yield_tables```. It is also possible and intended that 
+users can make their own preferred yield tables usable with *ForestElementsR* 
+even though they are not part of the collection that comes with the package. The 
+key object here is ```fe_yield_table```, and the function ```fe_yield_table()```
+was designed for generating such objects in a user friendly way. See the 
+vignette [Yield Tables in ForestElementsR](yield_tables.html) for a detailed 
+description of *ForestElementR*'s yield table system.
+
+The yield table system allows for an easy visualization of yield tables. We 
+demonstrate that by example of the widely known yield table for Norway spruce
+by @wiedemann_e_fichte_1942. Applying ```plot()``` to an object of class
+```fe_yield_table``` displays the 'site index fan', i.e. the mean stand height
+over age curves for the site indexes (si) covered by the table.
+
+```{r, fig.dim = c(4.9, 4.2), fig.align="center"}
+fe_ytable_spruce_wiedemann_moderate_1936_42 |> plot()
+
+```
+
+However, the visualization is not limited to the site index fan of a yield 
+table. Actually, any variable that is covered by a given yield table can be 
+visualized. See below how to obtain the names of all these variables:
+
+```{r}
+# Get all variables available in the yield table of interest
+vars <- names(fe_ytable_spruce_wiedemann_moderate_1936_42$values)
+vars
+```
+
+The following code plots the age-curves of the standing volume (variable name
+```v_m3_ha```); while the resulting figure is not embedded in this vignette due
+to memory constraints, the reader is encouraged to run this example. 
+
+```{r, eval=FALSE}
+# select standing volume ...
+fe_ytable_spruce_wiedemann_moderate_1936_42 |> plot(variable = "v_m3_ha")
+```
+
+With the code example below, we plot the periodic annual increment (variable
+name ```pai_m3_ha_yr```).
+
+```{r, fig.dim = c(4.9, 3.5), fig.align="center"}
+# ... and the periodic annual incement for plotting
+fe_ytable_spruce_wiedemann_moderate_1936_42 |> plot(variable = "pai_m3_ha_yr")
+```
+
+Historical fact: As the diagram obove clearly shows, Wiedemann's yield tables 
+were not constructed by fitting functions to electronic data, but in a rather 
+visual and manual way to point clouds on millimeter paper. At the time, viable 
+alternatives were not available. Nevertheless, *ForestElementsR* keeps yield 
+table values as provided (as long as they are consistent) and does not attempt 
+to smooth or harmonize them. We deem that important to ensure consistency with 
+previous applications of widespread yield tables. For more information about the 
+yield table system of *ForestElementsR* see the vignette 
+[Yield Tables in ForestElementsR](yield_tables.html).
+
+
+## 3 Low Level Methods {#low_level_methods}
+The functions we call *low level methods* are arguably the most important 
+constituents of *ForestElementsR*. These functions do not directly work on 
+objects of the *fe_stand* family, but they are typically the elementary
+ingredients of such. The purpose of these low level methods is to be 
+as generic as possible. This makes them the main tools for users who want to use
+*ForestElementsR* in a "forestry pocket calculator" style. As their input, they 
+typically expect vectors of tree variables. Their output typically is a single 
+value that is an aggregate of the input version or a vector that corresponds to
+each element of the input vector(s). Randomly chosen examples for such functions
+are ```d_q``` (quadratic mean diameter), ```d_100``` (dominant diameter), 
+```h_q```, ```h_100``` (quadratic mean height, dominant height), and
+```site_index``` (site index according to a yield table). If low level methods
+require species information, which is usually the case if they rely on species 
+specific parameters, a vector of a supported species coding (i.e. an object from
+the *fe_species* family) has to be their first input variable. Examples for this
+are ```v_gri``` (merchantable wood volume), ```shannon_index``` (species 
+diversity index after @shannon_1948), ```h_standard_bv``` (Bavarian standard
+height curve system after @kennel_r_beech_bavaria_1972). We demonstrate a little
+workchain in "forestry pocket calculator" style:
+
+Assuming we have sampled eight trees in a forest stand and recorded their 
+diameters at breast height, dbh, in cm.
+
+```{r}
+dbh <- c(30.5, 30.9, 33.3, 35.1, 19.4, 19.5, 28.1, 25.5)
+
+```
+
+For making things a bit more complex, we also assume that these trees have been
+sampled with the angle count method and a factor of 4. This means that each tree 
+represents a basal area of 4 m²/ha. Therefore, the *number of trees* that each 
+tree represents per ha depends on its diameter at breast height:
+
+```{r}
+# Calculate each tree's basal area in m²
+ba <- (dbh / 100)^2 * pi/4
+# Angle count factor 4/ba gives each tree's individual representation number
+# per ha
+nrep_ha <- 4 / ba
+nrep_ha
+```
+
+Given this information, we have functions for calculating classic stand 
+diameters:
+
+```{r}
+# Quadratic mean diameter
+dq <- d_q(dbh, nrep_ha)
+dq
+
+# Note that the quadratic mean diameter is always greater than the arithmetic
+# mean as calculated here
+stats::weighted.mean(dbh, w = nrep_ha)
+
+# Assmann's dominant diameter (quadratic mean diameter of the 100 thickest stems
+# per ha)
+d_100(dbh, nrep_ha)
+
+# Weise's dominant diameter (quadratic mean diameter of 20% thickest stems)
+d_dom_weise(dbh, nrep_ha)
+```
+
+As a next step we would like to calculate the trees' wood volumes. However, since
+their heights were not measured, we used a few orienting height measurements 
+of trees with diameters close to the quadratic mean diameter dq of
+`r round(d_q(dbh, nrep_ha), 1)` cm. From this measurements we estimated the
+corresponding height, hq, to be 23.6 m. Let's further assume that all trees in
+our sample are European beech (*Fagus sylvatica*) trees from a 72-year-old
+monospecific stand. This information allows us to estimate heights for all trees
+with the standard height curve system used by the Bavarian State Forest Service 
+[@kennel_r_beech_bavaria_1972]:
+
+```{r, fig.dim=c(7, 4), dpi=96}
+# Make a vector of 8 species ids = 5 and transform it into a tum_wwk_short
+# species coding vector (see vignette about Species Codings in ForestElementsR),
+# where code 5 stands for European beech.
+# For our monospecific sample, we could make things even simpler (i.e. providing
+# only one species id value for all trees together to the functions for height
+# and volume estimates below), but we prefer to show the more generic approach
+# here, where each tree has its own corresponding species id.
+species_id <- rep(5, 8) |> as_fe_species_tum_wwk_short()
+species_id
+
+oo <- options(fe_spec_lang = "eng") # display species names in English
+species_id
+
+hq  <- 23.6 # Height value corresponding to the quadratic mean diameter dq
+age <- 72   # Stand age
+
+# Estimate a height for each tree in the stand based on the information above
+# with the Bavarian standard height curve system
+h <- h_standard_bv(species_id, dbh, age, dq, hq)
+h    # Vector of height estimates corresponding to the dbh vector
+
+options(oo) # Switch back options to previous values
+```
+
+Having now dbh and height values for all trees, we can calculate their volumes.
+To that end, *ForestElementsR* provides the function ```v_gri()``` that 
+estimates a trees' standing merchantable wood volume over bark in m³:
+
+```{r, fig.dim=c(7, 4), dpi=96}
+v <- v_gri(species_id, dbh, h)
+v
+
+```
+
+Summing up the single tree volumes multiplied by the corresponding 
+tree's representation number per ha, we obtain the ha-related stand volume
+(as estimated from our sample of 11):
+
+```{r}
+v_ha <- sum(v * nrep_ha)
+v_ha
+
+```
+
+For estimating the volume increment, we could use a yield table (being aware 
+that yield tables substantially underestimate the actual growth observed in
+Central Europe over the last decades). For our stand we will use the yield 
+table for European beech by Wiedemann (1931) as published in 
+@hilfstafeln_bavaria_2018. This table is available as an ```fe_yield_table```
+object in *ForestElementsR* under the name 
+```fe_ytable_beech_wiedemann_moderate_1931```. In the following code examples,
+we will not provide too many details about how to actually use yield tables
+in *ForestElementsR*. See the vignette 
+[Yield Tables in ForestElementsR](yield_tables.html) for detailed explanations.
+The first thing we have to do is to find out the site index (ger. "Bonität") of
+our stand according to the selected yield table. For this, we require the
+stand's quadratic mean height, hq = `r hq` m, and the stand's age, which is 
+`r age` years:
+
+```{r}
+si <- site_index(
+  age    = age,
+  size   = hq,
+  ytable = fe_ytable_beech_wiedemann_moderate_1931,
+  si_variable = "h_q_m"
+)
+
+si
+
+```
+
+This site index of `r round(si, 1)` refers to the traditional way of site 
+indexing where 1.0 expresses the best site quality covered by a yield table. 
+Typically, 4.0, 5.0, or 6.0, depending on the table, would indicate the weakest 
+site conditions. In the vignette 
+[Yield Tables in ForestElementsR](yield_tables.html), we describe alternative
+supported ways of expressing site indexes. With the site index now known, the
+function `ytable_lookup()` can be used to obtain the stand's current increment 
+in m³/ha/yr according to the table.
+
+```{r}
+inc <- ytable_lookup(age = age, si = si, variable = "pai_m3_ha_yr",
+                     ytable = fe_ytable_beech_wiedemann_moderate_1931)
+inc
+
+```
+
+This increment estimate, `r round(inc, 1)` m³/ha/yr, refers to a fully stocked 
+stand. To find out whether it should be corrected due to the actual 
+stand density, the stocking level (ger. "Bestockungsgrad") of the stand of
+interest should be determined. We require the stand's basal area, its age, and
+the site index for doing so. As we have assumed that our trees are an angle 
+count sample with factor 4, each tree represents a basal area of 4 m²/ha.
+Therefore, the stand's basal area amounts to `r length(dbh) * 4` m²/ha. The
+stocking level results in:
+
+```{r}
+# Basal area per hectare from angle count sample
+ba_ha <- length(dbh) * 4
+ba_ha
+
+# Stocking level 
+stl <- stocking_level(ba = ba_ha, age = age, si = si,
+                      ytable = fe_ytable_beech_wiedemann_moderate_1931)
+
+stl
+
+```
+
+With a stocking level of about `r round(stl, 1)`, our stand is fully stocked
+compared to the yield table. While some yield tables come with their own
+increment correction tables for deviating stocking levels, we have decided not
+to implement these in *ForestElementsR* so far. Instead, we advocate for the
+simple, classic way of multiplying the original increment estimate by the 
+stocking level if the latter is less than one. An easy generic way for applying
+this rule in R would be as follows:
+
+```{r}
+inc * min(1, stl) # correct the increment only if stocking level < 1
+
+```
+
+A simple alternative way for estimating a stand increment in our example 
+situation could be applying the height and diameter growth functions of the
+German National Forest Inventory [@bwi3_methods_2017] to the quadratic mean
+diameter tree (ger. "Grundflächenmittelstamm"):
+
+```{r}
+# Current volume of the quadratic mean diameter tree (dbh = dq, height = hq)
+species_id  <- as_fe_species_tum_wwk_short(5) # Beech in tum_wwk_short coding
+vol_current <- v_gri(species_id, dq, hq)
+
+# future (+5 years) dq and hq estimated with German NFI3 functions
+dq_future   <- d_age_gnfi3(species_id, age + 5, dq, age)
+hq_future   <- h_age_gnfi3(species_id, age + 5, hq, age)
+
+# future volume of the quadratic mean diameter tree (dq-tree)
+vol_future  <- v_gri(species_id, dq_future, hq_future)
+
+# Estimated annual volume increment of the dq-tree
+# Division by 5 years, because we want an annual value
+iv_mean_tree <- (vol_future - vol_current) / 5 
+
+# The dq-tree currently represents so many trees per ha ...
+n_ha <- sum(nrep_ha)
+
+# ... therefore, we estimate the stand's increment as
+iv_stand <- iv_mean_tree * n_ha
+
+iv_stand
+
+```
+
+It does not come as a surprise that the latter increment estimate is higher
+than the one obtained from the yield table. The growth functions from
+the German National Forest Inventory (NFI) were calibrated with data that 
+reflect the recent reality of forest growth, in contrast with Wiedemann's yield 
+table which was developed using data that reflect the growth of over nine 
+decades or more ago. See @pretzsch_forest_2014, and @pretzsch_forest_2023 for 
+more information about forest growth trends in Central Europe. In general, 
+increment estimates that are not directly derived from repeated measurements 
+must *always* be interpreted with care and professional knowledge. Both methods 
+used in the code examples above, have their specific strengths and weaknesses. 
+Do not use them if you are not aware of these.
+
+We would like to draw your attention to another family of low level functions,
+which annable the evaluating of forest structure and diversity. In this field,
+we see a huge potential for assessing ecosystem services beyond wood production
+and biodiversity based on standard forest mensuration data 
+(see @biber_fuzzy_2021, and @biber_forest_2020). Let us have a look at the
+function ```shannon_index()``` that allows you to calculate the classic species
+diversity index after @shannon_1948. In the simplest case, the function 
+```shannon_index()``` requires just a vector of tree species codes as an input.
+See the function's documentation for more options. We apply it to example data 
+that come with *ForestElementsR* (type ```?example_data``` for an overview), 
+namely a monospecific stand, an even-aged mixed stand of two species,
+and a selection forest (ger. "Plenterwald"):
+
+```{r}
+# Monospecific stand
+#   1. Extract the tree data frame frame from an fe_stand_object
+trees <- norway_spruce_1_fe_stand$trees 
+#   2. Run shannon_index() on its species_id column (technically a vector)
+shannon_index(trees$species_id)
+
+# Two-species mixed stand
+trees <- spruce_beech_1_fe_stand$trees
+shannon_index(trees$species_id)
+
+# Selection forest
+trees <- selection_forest_1_fe_stand$trees
+shannon_index(trees$species_id)
+```
+
+Clearly, there is a plausible gradient with the monospecific stand having zero 
+species diversity, the selection forest having the highest diversity, and the
+even-aged mixed stand being in between. The species profile index by 
+@pretzsch_forest_2009 uses the same basic concept, but adds a vertical 
+component. Therefore, the species profile index is higher, the more 
+vertically structured a stand is, and the more species it contains. In a 
+mono-layered, monospecific stand, this index is zero. In *ForestElementsR*, it 
+is implemented as the function ```species_profile```, whose minimum input 
+requirements are a vector of species codes, and a corresponding vector of tree
+heights. We apply it to the same example stands as above:
+
+```{r}
+ # Monospecific stand
+trees <- norway_spruce_1_fe_stand$trees
+species_profile(trees$species_id, trees$height_m)
+
+# Two-species mixed stand
+trees <- spruce_beech_1_fe_stand$trees
+species_profile(trees$species_id, trees$height_m)
+
+# Selection forest
+trees <- selection_forest_1_fe_stand$trees
+species_profile(trees$species_id, trees$height_m)
+  
+```
+
+Predictably, the gradient we obtain is similar to what we find for the shannon
+index above. However, the species profile index of the monospecific stand is 
+somewhat greater than zero, indicating that the stand is at least, to some 
+degree, vertically structured. The values we obtain for the other two forest
+stands are quite typical for the stand types they represent. A lot more could be
+said about indicators for stand structure and diversity, but this is beyond the
+scope of this vignette. Interested readers are referred to the publications we 
+mentioned above. We see an increasing demand for such indicators in forest 
+practice and science, and plan to extend the corresponding family of functions 
+in *ForestElementsR* in the future.
+
+
+## 4 High Level Methods
+With the term *high level methods* we mean functions that expect objects of the 
+`fe_stand` class or its children as one of their inputs. Internally and usually, 
+these functions are tailored combinations of 
+[low level methods](#low_level_methods), offering users more aggregated 
+workflows that integrate seamlessly with `fe_stand`and child objects. Still, we
+consider the currently existing suite of high level methods far from complete, 
+but useful already. As a design requirement, all high level functions that 
+operate on the single trees of a `fe_stand` (or child) object have in common the 
+argument `tree_filter`. By default, this argument is `TRUE` which means that the
+function will use all trees stored in the `trees` data frame  inside the 
+`fe_stand` object (see [Section 2.1](#fe_stand_objects)). However, any valid
+R expression that evaluates to a logical value for each row of the `trees` data
+frame will work. This provides a high level of adaptability to varying data 
+evaluation requirements. Let us demonstrate this using the function 
+`stand_sums_static` and the example object `mm_forest_1_fe_stand_spatial` which
+is a cutout of a mixed mountain forest stand that has been surveyed several 
+times since 1975. The function `stand_sums_static` provides an overview of the
+most important static stand sum and mean values (from mean diameters to the 
+wood volume per ha) for each available survey of an `fe_stand` object:
+
+```{r}
+oo <- options(fe_spec_lang = "eng")
+
+# Include all trees in evaluation with stand_sums_static
+mm_forest_1_fe_stand_spatial |> stand_sums_static()
+
+# For applying a filter, we must refer to the column names of the "trees" data 
+# frame inside the fe_stand object. These are
+mm_forest_1_fe_stand_spatial$trees |> names()
+
+# Assume, we want to include only the trees that were not removed ...
+mm_forest_1_fe_stand_spatial |> stand_sums_static(tree_filter = !removal)
+
+# ... and now only the removal trees
+mm_forest_1_fe_stand_spatial |> stand_sums_static(tree_filter = removal)
+
+# Focus on Norway spruce and the surveys after 2000 only. Note, for filtering
+# on species names you must use the format() function
+# 1. Remaining trees only
+mm_forest_1_fe_stand_spatial |> 
+  stand_sums_static(
+    tree_filter = 
+      format(species_id, "eng") == "Norway spruce" & time_yr > 2000 & !removal
+  )
+
+# 2. Removal trees only
+mm_forest_1_fe_stand_spatial |> 
+  stand_sums_static(
+    tree_filter = 
+      format(species_id, "eng") == "Norway spruce" & time_yr > 2000 & removal
+  )
+
+options(oo)
+```
+
+When an `fe_stand` or child object comprises more than one survey, stand level
+periodic annual increments can be calculated. The high level function for this 
+task is `stand_sums_dynamic`. Internally, it uses the high level function 
+`stand_sums_static` we introduced above, and the low level function 
+`stand_level_increment`. As all trees represented in an `fe_stand` object must
+have a dbh entry, the basal area increment will always be calculated. If 
+enough information is available, i.e. each tree also has a height entry (be it
+measured or estimated), the volume increment will be calculated, too. The method
+of increment calculation follows the classic approach
+$iv = (vs_2 + vr_2 - vs_1)/p$, where $iv$ is the mean annual stand volume 
+increment during a period of $p$ years between two subsequent surveys. With 
+$vs_2$ and $vs_1$ we indicate the standing volume at the second and the first of
+two subsequent surveys, respectively. $vr_2$ is the volume that has been removed
+(or died) after the first survey up to, and including, the second survey #2. For
+the basal area increment, the approach is exactly the same as shown for the
+volume increment. We demonstrate `stand_sums_dynamic` by example of the mixed
+mountain forest stand introduced above:
+
+```{r}
+oo <- options(fe_spec_lang = "eng")
+
+# Calculate basal area and volume increments for an fe_stand object that covers
+# more than one survey
+ssd <- stand_sums_dynamic(mm_forest_1_fe_stand_spatial)
+ssd |> print(n = Inf)
+
+options(oo)
+```
+
+As in this example height values are available for all trees in all surveys,
+not only the basal area increment, but also the volume increment is calculated.
+The increment entry at the first survey is `NA`, because there is no preceding
+survey, and an increment entry always relates to the period between the survey
+of interest and the previous one. Species overarching increments can be easily
+calculated from the output of `stand_sums_dynamic` just by standard R methods,
+or even more conveniently with `group_by` and `summarise` as provided by the 
+`dplyr` package:
+
+```{r}
+# Species-overarching increments
+stand_sums_dynamic(mm_forest_1_fe_stand_spatial) |>
+  group_by(time_yr) |>
+  summarise(
+    iba_m2_ha_yr = sum(iba_m2_ha_yr, na.rm = TRUE),
+    iv_m3_ha_yr  = sum(iv_m3_ha_yr,  na.rm = TRUE)         
+  )
+
+# Zero increments for 1975 are obtained, because no previous survey is 
+# available, so no meaningful increment can be calculated there
+
+```
+
+Arguably, `stand_sums_static` and `stand_sums_dynamic` are the most important
+high level functions currently implemented in *ForestElementsR*. Other prominent
+ones are `survey_overview`, and `species_shares`. We also provide
+specific implementations of the generic functions `plot` and `summary` for 
+`fe_stand` and child classes; the `summary` method being basically a wrapper 
+around `stand_sums_dynamic`. All the high level functions mentioned so far have 
+in common the `tree_filter` argument (see above) that allows users to isolate
+specific sub cohorts of trees for evaluation. A high level function that does
+not require such a filter is `get_area_ha`. For any `fe_stand` or child object
+where this is meaningful, it returns the total area (in ha) covered by the stand 
+or plot in the terrain:
+
+```{r}
+# fe_stand
+get_area_ha(norway_spruce_1_fe_stand)
+
+# fe_stand_spatial
+get_area_ha(mm_forest_1_fe_stand_spatial)
+
+# fe_ccircle_spatial (the area of the outermost circle is returned)
+get_area_ha(spruce_pine_ccircle_spatial)
+
+```
+
+So far, with this vignette we have provided an overview of the features of the
+package *ForestElementsR* we deem most important for standard users. Such a 
+vignette, however, is not the place to describe each function in detail. You 
+find this information in the specific documentation of the functions.
+
+
+## 5 Expert Methods
+What we call expert methods are functions that are not intended to be used by
+standard users who want to directly work with forest data, but by developers.
+An important group of such functions are the constructors for the S3 classes
+(i.e. the [object families](#object_families)) we implemented, e.g. `fe_stand`,
+`fe_yield_table`, etc. Following standard practice, the names of these 
+constructors begin with "new_" followed by the name of the class, e.g. 
+`new_fe_stand`, or `new_fe_yield_table`. Only persons who are well aware of what
+they are doing should use these constructors, as they do not prevent users from
+creating ill-formed objects. Checking objects for adherence to the classes' 
+requirements is the task of the validators, another important group of expert 
+functions. Their names begin with "validate_" followed by the name of the class, 
+e.g. `validate_fe_stand`, or `validate_fe_yield_table`. If you are using the 
+constructors for creating objects, it will most probably be an excellent idea
+to use a validator afterwards. As a standard user you should always use the
+helper functions that simply have the same name as the class of interest for 
+creating an object (e.g. the functions `fe_stand`, `fe_yield_table`). 
+Internally, these apply the appropriate constructor and the validator in the 
+correct way and try to be as helpful to users as possible.
+
+
+## 6 Technical Specifics
+*ForestElementsR* uses the [S3](https://adv-r.hadley.nz/s3.html) object system
+which is arguably the most widely used of R's approaches to object oriented 
+programming [@wickham_h_advancedr_2nd_ed_2019]. We deemed this approach ideal
+for using the advantages of object oriented programming in a lean pragmatic way.
+
+## 7 Acknowledgments
+The authors would like to thank the Bavarian Ministry for Nutrition, Agriculture,
+Forestry, and Tourism for funding the projects *FeNEU: Ein innovatives Instrument*
+*für die forstliche Planung in Bayern* (E062) and *Ertragskundliche Betreuung der* 
+*langfristigen Versuche* (W007).
+
+## References
+
+
+
+
+
+
+
+
+
+
+

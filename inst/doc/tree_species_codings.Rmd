@@ -1,0 +1,863 @@
+---
+title: "Tree Species Codings in ForestElementsR"
+author: "Peter Biber"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+bibliography: REFERENCES.bib
+vignette: >
+  %\VignetteIndexEntry{Tree Species Codings in ForestElementsR}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## 1. Introduction
+
+Unfortunately, the way how tree species are coded in forest data varies
+vastly among research institutions, forest administrations, and the
+likes. In order to make the package *ForestElementsR* broadly
+applicable, it requires a generic coding system that can cover any
+specific species coding system and allows to translate from one into the
+other. In contrast to what one might expect, this is not a trivial task,
+as most existing codings do include not only codes for single species,
+but also for species groups. These groups are rarely the same across
+different codings which causes certain issues to be covered by a useful
+generic coding system. Such a generic approach, in addition, requires to
+be open to include any desired additional species and specific codings.
+
+## 2. Where to find things and what they are good for
+
+Before I show how to actually work with species codings in
+*ForestElementsR*, I will talk about where to find all implemented
+codings in the package. For the code examples below to work, you will
+need to attach *ForestElementsR* itself, and the packages *tibble*,
+*dplyr*, and *ggplot2* from the
+[*tidyverse*](https://www.tidyverse.org/) which make handling and output
+more convenient.
+
+```{r setup, message = FALSE}
+library(ForestElementsR)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+```
+
+### 2.1 The species master table {#species_master_table}
+
+The *data.frame* (actually, a *tibble*) *species_master_table* is the
+most important part of the generic species coding system. Any single
+species to be included in any specific coding must be absolutely listed
+here, as the species master table serves as the common reference for all
+implemented codings. Conversely, specific species codings do not need to
+comprise all species provided in the species master table. In order to
+view this table it is only necessary to type its name:
+
+```{r view_species_master_table}
+species_master_table
+
+# Also show the tail of the table
+species_master_table |> tail(10)
+```
+
+In contrast to specific codings (see below) the species master table
+must contain single species only, i.e. each row represents a species,
+never a group of species. Currently, it comprises
+`r nrow(species_master_table)` tree species. Let us have a look at the
+table's anatomy:
+
+The key fields of the species master table are *genus* and *species_no*.
+Together, they must be unique. Both are of type character. *genus*
+represents a specie's genus name, *always in lower case letters*, and
+*species_no* is always a three-digit number with leading zeroes. This
+approach was chosen because of a few advantages: While genus names are
+usually stable, species names may change more often. Therefore, the
+species inside a genus are identified with a number instead of a name.
+New species can be easily added without the danger of running out of
+numbers and being thus forced to break the coding concept. For
+convenience, the table also contains the column *deciduous_conifer*
+which allows only for the two values *conif* and *decid*. This column is
+not part of the actual species key, but it it is intended for filtering
+purposes, and for all relevant forest tree species, the distinction
+between both groups should be biologically correct or at least
+practical. The three remaining fields, *name_sci*, *name_eng*, and
+*name_ger* contain the scientific, colloquial English, and colloquial
+German names of all species.
+
+### 2.2 Specific species codings {#species_specific_codings}
+
+#### 2.2.1 General setup
+
+All specific species codings implemented in *ForestElementsR* are stored
+in the tibble *species_codings*:
+
+```{r view_species_codings}
+species_codings
+```
+
+Each row in this tibble represents a specific coding; hereby the column
+`species_coding` provides the coding's name, and the column `code_table`
+provides an own tibble that defines the coding and links it to the
+species master table. Currently, there are six codings implemented
+(*master*, *tum_wwk_short*, *tum_wwk_long*, *ger_nfi_2012*,
+*bavrn_state*, *bavrn_state_short*). We use the coding *tum_wwk_short* for 
+explaining the implementation. This species coding is used for many purposes at 
+the Chair of Forest Growth and Yield Science at the Technical University of
+Munich. It comprises a small set of the most important tree species in
+Central Europe only, while all other species are attributed to three
+larger container groups. In order to see the coding table, it could be
+accessed by usual indexing of the tibble *species_coding*, but it is
+more convenient to use the function *fe_species_get_coding_table* which
+needs to be called with the name of the desired coding:
+
+```{r get_coding_table}
+fe_species_get_coding_table("tum_wwk_short")
+```
+
+Clearly, this table closely resembles the species master table, as they
+have in common the columns *genus*, *species_no*, *deciduous_conifer*,
+*name_sci*, *name_eng*, and *name_ger*. Most importantly, however, there
+is the additional column *species_id*. This column contains the actual
+coding, and it is always of type character, even if the coding is
+exlusively consisting of numbers. Such a coding table is not required to
+comprise all species available in the species master table, but it must
+not contain any species which is not included there. In other words, a
+coding table is not allowed to contain any combination of *genus* and
+*species_no* which is not contained in the species master table. The
+species names, however, may differ from those in the master table in
+order to allow e.g. for regional colloquial naming preferences or, more
+importantly, for naming species groups which, by definition, do not
+exist in the master table. Let's have a view on the coding in compact
+form:
+
+```{r view_coding_compact}
+fe_species_get_coding_table("tum_wwk_short") |>
+  select(species_id, name_eng) |> # English names only for clarity
+  distinct()
+```
+
+As it is easily visible in this display, the coding distinguishes only
+ten species (groups). From the names, it can be already guessed which
+species_id's refer to single species and which to groups, but we should
+use R to find this out unambiguously:
+
+```{r view_species_numbers_in_coding}
+fe_species_get_coding_table("tum_wwk_short") |>
+  group_by(species_id, name_eng) |>
+  summarise(n_species = n()) |>
+  arrange(as.numeric(species_id)) # not required, but output is nicely sorted
+```
+
+Clearly, every species_id with n_species \> 1 actually represents a
+group of tree species. Let us look at the smallest group (species_id 6),
+which comprises only two species:
+
+```{r view_quercus_group}
+fe_species_get_coding_table("tum_wwk_short") |>
+  select(species_id, genus, species_no, name_eng) |>
+  filter(species_id == "6")
+```
+
+We see that the two species in this group are *quercus* *001* and
+*quercus* *002*, but the colloquial species name in the coding table is
+the group name only. In order to find out the species names, we can
+obtain them from the species master table with the help of *genus* and
+*species_no*:
+
+```{r get_quercus_group_names}
+species_master_table |>
+  filter(genus == "quercus" & species_no %in% c("001", "002")) |>
+  select(-deciduous_conifer)
+```
+
+#### 2.1.2 Implemented codings {#implemented_codings}
+
+Six species codings are currently implemented. While their
+documentation in the package and can be accessed with
+`?species_codings`, I list them also here:
+
+-   **master:** This is the original species coding used by the package
+    *ForestElementsR*. It contains each species from the
+    *species_master_table* and no species groups. This coding
+    corresponds directly to the species_master_table. Its species_id's
+    are the master table's columns *genus* and *species_no* combined
+    into one character string, separated by an underscore.
+
+-   **tum_wwk_short:** This is one of two codings in use at the Chair of
+    Forest Growth and Yield Science at the Technical University of
+    Munich. It defines only a small set of single species explicitly
+    (the most important ones in Central Europe), while all other species
+    are attributed to a few large container groups.
+
+-   **tum_wwk_long:** This is one of two codings in use at the Chair of
+    Forest Growth and Yield Science at the Technical University of
+    Munich. It defines a larger set of single species than the
+    *tum_wwk_short* coding. In its original version, this coding
+    contains several species groups, but most of these groups are
+    ambiguous as they include species for which also a single code is
+    provided. These ambiguous groups were not included in this package.
+
+-   **bavrn_state:** This species coding is the coding used by the
+    Bavarian State Forest Service.
+    
+-   **bavrn_state_short:** This coding that combines the species of 
+    *bavrn_state* into larger groups. These groups are typically used
+    by the Bavarian State Forest Service in aggregated evaluations.    
+
+-   **ger_nfi_2012:** The ger_nfi_2012 species coding is the species
+    coding used by the German National Forest Inventory of 2012
+    [@bwi3_methods_2017].
+
+
+## 3. Usage
+
+Species codes as implemented in this package are vectors with a few
+special properties. Most users of the package, will work with species
+codes as columns in a *data.frame* (or *tibble*), where they are
+provided in parallel with other columns (i.e. vectors) that contain
+other tree information, e.g. tree diameters, heights, or spatial
+coordinates. For the sake of clarity, however, we demonstrate most
+applications for isolated vectors of species codes.
+
+
+### 3.1 Creating a species code vector
+
+For each implemented species coding there exists a user friendly
+function for constructing a vector of species. The naming convention for
+this function is *fe_species_coding_name*, whereby *coding_name* is the
+name of the desired coding as in the column *species_coding* in the
+tibble *species_codings* (see above). Thus, e.g. for creating a vector
+of *tum_wwk_short* or *ger_nfi_2012* codes, one would use the functions
+*fe_species_tum_wwk_short* or *fe_species_ger_nfi_2012*, respectively.
+As their input, these functions require a vector of codes either in
+numeric or character format:
+
+```{r create_species_code_vectors}
+spec_ids_1 <- fe_species_tum_wwk_short(c(1, 1, 1, 5, 5, 5, 5, 3, 3, 8, 9, 8))
+spec_ids_2 <- fe_species_ger_nfi_2012(
+  c(10, 10, 10, 100, 100, 100, 100, 20, 20, 190, 290, 190)
+)
+
+spec_ids_1
+spec_ids_2
+```
+
+If the input vector contains codes which are not supported by the chosen
+coding, the attempt terminates with an error:
+
+```{r bad_code_input, error = TRUE}
+fe_species_tum_wwk_short(c(1, 321, 1, 9999))
+fe_species_ger_nfi_2012(c("100", "290", "Peter", "Paul", "Mary"))
+```
+
+For each implemented coding there exists a function
+*is_fe_species_coding_name* for checking whether an object is a vector
+of species codes of the requested class:
+
+```{r check_object_if_species_codes}
+spec_ids <- c(1:10)
+is_fe_species_tum_wwk_short(spec_ids)
+spec_ids <- fe_species_tum_wwk_short(c(1:10))
+is_fe_species_tum_wwk_short(spec_ids)
+is_fe_species_bavrn_state(spec_ids)
+```
+
+NA values are in principle allowed in species code vectors, there may
+be, however, objects (like *fe_stand*, covered in an own vignette) which
+enforce species code vectors without NAs.
+
+
+### 3.2 Display options {#display_options}
+
+By default, species code vectors are displayed "as they are", i.e. what
+we see are the original codes as in the column *species_id* in the
+corresponding coding's table (see above). Sometimes, e.g. for creating
+output for third parties, the actual species names are preferable. The
+most convenient way to achieve that is to set the option *fe_spec_lang*
+which can take the values *sci*, *eng*, *ger*, and *code*. Let's create
+four species code vectors
+
+```{r option_spec_lang}
+spec_ids_1 <- fe_species_tum_wwk_short(c(1, 1, 5, 5, 5, 5, 3, 3))
+spec_ids_2 <- fe_species_ger_nfi_2012(c(100, 100, 20, 20, 30, 110))
+spec_ids_3 <- fe_species_bavrn_state(c(60, 60, 30, 30, 84, 86))
+spec_ids_4 <- fe_species_master(c("abies_001", "tilia_002", "ulmus_001"))
+```
+
+The default display is:
+
+```{r reset_spec_lang_option, echo = FALSE}
+op_help <- options(fe_spec_lang = NULL) # catch user's actual setting
+```
+
+```{r display_default_codes, echo = FALSE}
+spec_ids_1
+spec_ids_2
+spec_ids_3
+spec_ids_4
+```
+
+With the option *fe_spec_lang* set on "sci", the scientific species
+names are displayed:
+
+```{r display_scientific_names}
+options(fe_spec_lang = "sci") # Display scientific species names
+
+spec_ids_1
+spec_ids_2
+spec_ids_3
+spec_ids_4
+```
+
+For printing the colloquial English species names, the option "eng" is
+the choice:
+
+```{r display_english_names}
+options(fe_spec_lang = "eng") # Display English species names
+
+spec_ids_1
+spec_ids_2
+spec_ids_3
+spec_ids_4
+```
+
+```{r set_spec_lang_option_to_original, echo = FALSE}
+options(fe_spec_lang = op_help)
+```
+
+In the same way, you can use `options(fe_spec_lang = "ger")` for having
+the German species names displayed. With
+`options(fe_spec_lang = "code")` or `options(fe_spec_lang = NULL)`. If
+you do not want to work with such options, and want just a quick check
+of the species names corresponding to given codes, you could use the
+function *format*. It takes the species code vector to be displayed, and
+*spec_lang*, which can be "sci", "eng", "ger", and "code" with exactly
+the same meanings as explained above. The output of *format* is never an
+fe_species coding object, but always a character vector (which is useful
+for some purposes):
+
+```{r format_example}
+format(spec_ids_1, spec_lang = "eng")
+format(spec_ids_2, spec_lang = "sci")
+format(spec_ids_3, spec_lang = "code")
+format(spec_ids_4, spec_lang = "ger")
+```
+
+Note that the names for display are always taken from the specific
+coding's table, not from the species master table. Be also aware that
+such species names are not the codes themselves. This means, you cannot
+generate a species code vector from a vector of species names:
+
+```{r do_not_try_to_generate_from_names, error = TRUE}
+spec_names <- c("Abies alba", "Picea abies")
+fe_species_ger_nfi_2012(spec_names)
+```
+
+When assigning new values to elements of a species coding vector, the
+safest way to do so is to provide the new values as an instance of the
+same class. But with all other values, an attempt will be made to
+convert them into an instance of the goal class. If this is not
+possible, the assignment does not take place, and an error is thrown.
+
+```{r assigning_species_codes, error = TRUE}
+spec_vec <- fe_species_bavrn_state(c("10", "10", "10", "50", "50", "50"))
+format(spec_vec, "eng")
+
+# Safest way, same class on both sides of the '<-'
+spec_vec[3] <- fe_species_bavrn_state("40")
+is_fe_species_bavrn_state(spec_vec)
+format(spec_vec, "eng")
+
+# Character vector is converted
+spec_vec[3:4] <- c("40", "70")
+is_fe_species_bavrn_state(spec_vec)
+format(spec_vec, "eng")
+
+# Numerical vector is converted
+spec_vec[3:4] <- c(60, 87)
+is_fe_species_bavrn_state(spec_vec)
+format(spec_vec, "eng")
+
+# Species code not supported by goal coding - no assignment and error
+spec_vec[1:2] <- c("3333", "12")
+is_fe_species_bavrn_state(spec_vec)
+format(spec_vec, "eng")
+
+# Vectors of other species codings are converted, if possible
+spec_vec[5:6] <- fe_species_tum_wwk_short(c("3", "3")) # "3" Scots pine in rhs
+# coding
+is_fe_species_bavrn_state(spec_vec)
+format(spec_vec, "code") # "3" becomes "20" ...
+format(spec_vec, "eng") # ... which is Scots pine in the goal coding
+```
+
+
+### 3.3 Species code conversions
+
+For each implemented species coding there is a function
+*as_fe_species_coding_name* which tries to convert an object of any
+other given species coding implemented in *ForestElementsR* into an
+instance of the goal object. You can use it also for converting numeric
+or character vectors (as an alternative to *fe_species_coding_name*),
+but the interesting feature is the conversion between different codings:
+
+```{r unproblematic_conversion}
+spec_ids <- as_fe_species_tum_wwk_short(c("1", "3", "5"))
+as_fe_species_ger_nfi_2012(spec_ids) |> format("eng")
+```
+
+When the initial species code vector contains codes which belong to the
+same species group in the goal coding, information is lost when doing
+the conversion. This is a *backward ambiguous cast*. In such a case, the
+conversion is executed, but a warning is issued.
+
+```{r conversion_with_information_loss}
+spec_ids_1 <- as_fe_species_ger_nfi_2012(c("170", "150", "140"))
+spec_ids_1 |> format("eng")
+
+# Backward ambiguous cast (possibly, but with information loss)
+spec_ids_2 <- as_fe_species_tum_wwk_short(spec_ids_1)
+spec_ids_2 |> format("eng")
+```
+
+Conversions with no match in the goal coding terminate with an error:
+
+```{r impossible_conversion_no_match, error = TRUE}
+spec_ids <- as_fe_species_bavrn_state(c("11", "11", "11"))
+spec_ids |> format("eng")
+
+# No Serbian spruce in the tum_wwk_long coding
+spec_ids |> as_fe_species_tum_wwk_long()
+```
+
+*Forward ambiguous casts* occur when one code in the initial code vector
+has several matches in the goal coding. If this is the case, execution
+terminates, and an error is thrown:
+
+```{r forward_ambiguous_cast, error = TRUE}
+# Each of these codes comprises many single species
+spec_ids <- fe_species_tum_wwk_short(c("8", "9", "10"))
+spec_ids |> format("eng")
+
+# Conversion attempt terminates with error
+spec_ids |> as_fe_species_ger_nfi_2012()
+
+# Similar
+as_fe_species_master(fe_species_ger_nfi_2012("90"))
+```
+
+Note that the operability of a species coding cast is checked for each
+single conversion attempt, because it does depend on the single species
+codes to be converted. I.e. some conversions between the same codings
+will work well while others fail:
+
+```{r good_and_bad_conversions_between_same_types, error = TRUE}
+# Conversion from tum_wwk_short to ger_nfi_2012 - works
+spec_ids_1 <- fe_species_tum_wwk_short(c("1", "3", "5"))
+spec_ids_1 |> format("eng")
+
+spec_ids_2 <- as_fe_species_ger_nfi_2012(spec_ids_1)
+spec_ids_2 |> format("eng")
+
+# Conversion from tum_wwk_short to ger_nfi_2012 - fails
+spec_ids_1 <- fe_species_tum_wwk_short(c("8", "9", "10"))
+spec_ids_1 |> format("eng")
+
+spec_ids_2 <- as_fe_species_ger_nfi_2012(spec_ids_1)
+```
+
+In some cases one might want to extract the character vector of species
+codes out of an *fe_species_coding_name* vector. This is possible either
+with *unclass* or with *vctrs::vec_data* (the species codings are
+implemented based on the package
+[*vctrs*](https://vctrs.r-lib.org/index.html)).
+
+```{r option_2a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r get_the_char_vector}
+spec_ids <- fe_species_ger_nfi_2012(c("10", "10", "100", "170"))
+spec_ids
+
+chars_1 <- unclass(spec_ids)
+chars_1
+chars_2 <- vctrs::vec_data(spec_ids)
+chars_2
+
+is_fe_species_ger_nfi_2012(chars_1)
+is_fe_species_ger_nfi_2012(chars_2)
+
+is.character(chars_1)
+is.character(chars_2)
+```
+
+```{r option_2b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+
+### 3.4 Practical examples
+
+As mentioned above, species codes do typically not come as isolated
+vectors, but as columns in a data frame (tibble). We isolate one such
+data frame from the *fe_stand* object *selection_forest_1\_fe_stand*
+which is among the example data that come with the package
+*ForestElementsR*:
+
+```{r option_3a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r demo_with_selection_forest_1}
+dat <- selection_forest_1_fe_stand$trees |> select(
+  tree_id, species_id, time_yr, dbh_cm, height_m
+)
+dat
+```
+
+```{r option_3b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+Here, each row represents one tree, the column *species_id* represents
+species codes, and the other columns represent additional key fields
+(*tree_id*, *time_yr*) and tree data (*dbh_cm*, *height_m*). When the
+package *tidyverse* or *tibble* is attached, the tibble is displayed as
+shown below, and the abbreviation *tm_wwk_shrt* indicates, that the
+coding is *tum_wwk_short*. As by standard only the first ten lines are
+shown, we see only the species code "1". For finding out if there are
+more species, we could use the function *summary*:
+
+```{r option_4a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r demo_with_selection_forest_2}
+dat |> summary()
+```
+
+```{r option_4b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+Very similar as in a summary for a *factor* the summary for the column
+*species_id* provides the row counts for each of the four coded species.
+In order to display species names instead of the codes, we have to set
+the option *fe_spec_lang* (see also above):
+
+```{r option_5a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r demo_with_selection_forest_3}
+# Set option to display colloquial English species names, and store the
+# previous setting in opt_prev
+opt_prev <- getOption("fe_spec_lang")
+options(fe_spec_lang = "eng")
+
+# Display dat
+dat
+
+# Display a summary of dat
+dat |> summary()
+
+# Reset option to previous value
+options(fe_spec_lang = opt_prev)
+```
+
+```{r option_5b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+Let's assume, we want to know the mean stem volume per species (group)
+and its standard deviation. In order to achieve that, we require each
+tree's volume first. This can be done with the function *v_gri* which
+requires the three inputs *species_id*, *dbh_cm*, and *height_m*. The
+function *v_gri* is originally designed to work with the species coding
+*tum_wwk_short* (as available in the example data), but it can process
+any input for *species_id* that can be converted into the former.
+
+```{r option_6a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r single_tree_volumes}
+opt_prev <- getOption("fe_spec_lang")
+options(fe_spec_lang = "eng")
+
+dat <- dat |>
+  mutate(v_cbm = v_gri(species_id, dbh_cm, height_m))
+
+# Note that the summary of species_id does not preserve the original order of
+# the codes (species are alphabetically sorted, dependent on language setting)
+dat |> summary()
+
+options(fe_spec_lang = opt_prev)
+```
+
+```{r option_6b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+The summary reveals a wide range of volumes which is plausible, given
+the range of dbh and height values. For obtaining the mean volumes per
+species (group), we can use the *dplyr* functions *group_by* and
+*summarise* which work also with our species codings. We see from the
+summary below that e.g. Abies alba has the smallest mean stem volume
+which comes, however, with the highest standard deviation.
+
+```{r option_7a, echo = FALSE}
+opt_help <- getOption("fe_spec_lang")
+options(fe_spec_lang = "code")
+```
+
+```{r mean_volumes}
+# Set option for displaying scientific species names
+opt_prev <- getOption("fe_spec_lang")
+options(fe_spec_lang = "sci")
+
+dat |>
+  group_by(species_id) |>
+  summarise(
+    mean_stem_volume_cbm = mean(v_cbm),
+    sd_stem_volume_cbm = sd(v_cbm)
+  )
+# In contrast to summary, summarise keeps the original order of the species
+# codes, no matter the language setting
+
+options(fe_spec_lang = opt_prev)
+```
+
+```{r option_7b, echo = FALSE}
+options(fe_spec_lang = opt_help)
+```
+
+Note, that plotting functions do currently not work with the species
+codings. Use the format function for such purposes:
+
+```{r plot_1, fig.cap=, fig.dim=c(4.9, 3.5), fig.align = 'center', fig.cap = 'Stem volume over diameter by species in log-log display'}
+# Note: Using simply 'format(species_id)' below would use the current setting
+# of the option fe_spec_lang
+dat |>
+  ggplot() +
+  geom_point(aes(x = dbh_cm, y = v_cbm, col = format(species_id, "eng"))) +
+  scale_color_discrete("Species") +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+
+## 4. Informations for developers
+
+Most prominently, in the context of species codes a developer of the
+package *ForestElementsR* will want to add a new species coding. A few things
+have to be done in order to make that work. We mention these work steps first,
+and detail on them below:
+
+- If the coding contains new species, add them to the species master table
+- Add new species to the *fe_species_master* coding
+- Add the new coding to the *species_coding* tibble
+- Copy the R-source file of an existing coding and adapt it (easy!)
+- Add a species coding cast function to your new coding to the R-source file
+  of each other coding (easy!)
+- Document the new coding (easy!)
+- Add your new coding to the automated tests for species codings (not difficult)
+- **Never** touch the source file *fe_species_helper_functions.R* if you do not
+  *exactly* know what you are doing. 
+
+Before we get into the details, note that all species codings inherit from the
+*vctrs_vctr* class which is provided by the package [*vctrs*](https://vctrs.r-lib.org/index.html):
+
+```{r all_inherit_from_vctrs}
+fe_species_bavrn_state("30") |> class()
+fe_species_ger_nfi_2012("20") |> class()
+fe_species_tum_wwk_long("87") |> class()
+fe_species_tum_wwk_short("7") |> class()
+fe_species_master("abies_004") |> class()
+```
+
+While this does not allow for building species_coding super- and subclasses, 
+which would be an obvious feature for a system of species codings, it has a very convenient way of supporting casts between different classes. As this is a key requirement of our implementation, we decided to design a *vctrs* based 
+solution. But now, let's talk about the above-mentioned steps in somewhat more
+detail.
+
+
+### 4.1 Check for new species and add them to the species master table
+
+If you plan to implement a new species coding, care fully check the [species 
+master table](#species_master_table) if there is any species in your coding
+which is not covered which is not listed in the master table, yet. If it is not,
+you can add it as a new row. Probably, the *genus* where your new species 
+belongs to is already present. In this case simply give your entry the desired
+*genus* name (always lowercase!) and use for the *species_no* entry the greatest
+existing species number plus one (always three digit character string with 
+leading zeroes). Fill the other field of the row with the correct species names
+and the *deciduous_conifer* information. In case, the required *genus* is not
+yet covered, introduce it to the table and give your entry the *species_no*
+'001'. Note that NA values are not allowed at all in the species master table.
+
+However, you must by any means avoid to have the same species twice in the 
+species master table. Maybe, the species is listed, but under a different name
+than that you are used to. In this case, remember, you can choose different
+names in your specific coding table, as long as the link to the correct entry in 
+the species master table by *genus* and *species_no* is existing. If you feel
+a scientific name in the species master table is outdated or that colloquial
+names could be better chosen, please contact the maintainers of 
+*ForestElementsR* before making any changes.
+
+
+### 4.2 Add new species to the coding fe_species_master
+
+By definition, the coding [*fe_species_master*](#implemented_codings) is the 
+coding that mirrors the contents of the species master table. So, if you have
+added a new species to the master table, you must also add it to the coding. 
+Inside the tibble *species_codings*, access the *code_table* for the 
+*species_coding* *master* and add the species. See 
+[here](#species_specific_codings) for an explanation of the tibble 
+*species_codings* and its substructures.
+
+
+### 4.3 Add the new species coding to the tibble *species_codings*
+
+First, give your new coding a name which is short, but informative enough. See
+our examples [here](#implemented_ _codings). Add a new row to the tibble
+[*species_codings*](#species_specific_codings) and insert the name you chose in 
+the field *species_coding*. In the second field (*code_table*) insert a tibble
+with exactly the structure as explained in 
+[Section 2.2](#species_specific_codings). In the column *species_id* you must 
+provide your own codes (always character, even if they are numbers only). The
+link to the [species master table](#species_master_table) must be guaranteed
+with the entries in *genus* and *species_no*. All your species must be listed
+in the master table, but your coding is not required to cover all species of
+the master table. The species names in your code table may differ from those
+in the master table; when [displaying names](#display_options), those of your 
+code table are used. Note that no NA's at all are allowed in your code table.
+
+if you give the same *species_id* to several species in the code table, these
+species will be treated as a group. As species name in the code table, you must
+then use the same group name for all these species. Look into the existing 
+codings for examples, e.g. the species_id's 8, 9, and 10 in the coding *tum_wwk_short*.
+
+
+### 4.4 Copy the R-source file of an existing coding and adapt it {#adapt-source-file}
+
+Now, you must provide the functions in order to make your new coding workable.
+While this sounds difficult, it is actually really easy. Before we explain how
+to do that, be aware of the following naming convention:
+
+*The S3 class covering your species coding must be named "fe_species_" followed
+by the name of your coding.*
+
+In other words, if your new coding is named *john_doe_coding* (and that is also
+*exactly* what you called it in the 
+[tibble species codings](#species_specific_codings)), then your S3 class name 
+must be *fe_species_john_doe_coding*.
+
+First, copy the R source file of one of the implemented codings, and 
+give it the name of your S3 class (in our example 
+*fe_species_john_doe_coding.R*). Note, that the files with the existing 
+implementation follow this naming convention. For this explanation, I assume
+you have copied and renamed the file *fe_species_tum_wwk_short.R*. You could now
+literally get an almost working implementation by automatic search for the term
+*fe_species_tum_wwk_short* and replace it with *fe_species_john_doe_coding*, 
+however, if you must, do it function by function, not for the whole file in one
+go. Note, that you must also exchange the terms in the documentation above each
+function, not only in the R code itself. Important: you will also have to 
+adjust the examples by using species codes which are actually covered by your 
+coding. Otherwise, the examples will not work, and the package will not pass
+*R CMD check*.
+
+From top to bottom of the file *fe_species_tum_wwk_short.R*, the functions to 
+update are:
+
+- the constructor *new_fe_species_tum_wwk_short*
+- *is_fe_species_tum_wwk_short*
+- the formatter *format.fe_species_tum_wwk_short*
+- *summary.fe_species_tum_wwk_short*
+- *vec_ptype_abbr.fe_species_tum_wwk_short*; here you should also replace the
+  provided abbreviation for the coding name by one of your own (this 
+  abbreviation is printed e.g. as type information below the column head if
+  your coding is a column of a tibble)
+- *validate_fe_species_tum_wwk_short*
+- *fe_species_tum_wwk_short*, the function users should use for constructing
+  an instance of a species coding object
+  
+- *vec_proxy_order.fe_species_tum_wwk_short*; guarantees always the same order 
+  if species id's are to be sorted. The order will not change, even if the
+  option fe_spec_lang is changed
+  
+- Now comes a block of species type casting functions. Their names are built
+  like .e.g *vec_cast.fe_species_tum_wwk_short.fe_species_ger_nfi_2012*, which
+  means *vec_cast.fe_species_GOAL_CODING_NAME.fe_species_FROM_CODING_NAME*.
+  These functions are very short, and some of them use the coding names 
+  internally. If you are qualified to work on this R package, you understand
+  immediately, what to adapt. In general, in the function names, you must
+  replace *tum_wwk_short* as the goal coding with *john_doe_coding*, In 
+  addition, you must copy one of the functions which casts between two species
+  codings, and adapt it so that it casts from *tum_wwk_short* to 
+  *john_doe_coding*, i.e. name
+  it *vec_cast.fe_species_john_doe_coding.fe_species_tum_wwk_short*, and make
+  the obvious adaptions in the function's body.
+- *as_fe_species_tum_wwk_short* which is the actual functions users call for
+  casts between codings
+  
+  
+### 4.5 Add a species coding cast function to each other coding
+
+In the previous step, you have placed a *vec_cast* function that casts 
+other codings into your new coding in the implementation of the new coding. Now,
+you have to add such a function that casts from your coding into another coding
+to the implementation of each other coding. In other words, the implementation
+of *fe_species_tum_wwk_short* requires a function called
+*vec_cast.fe_species_tum_wwk_short.fe_species_john_doe_coding*, and the 
+implementation of *fe_species_ger_nfi_2012* requires a function
+*vec_cast.fe_species_ger_nfi_2023.fe_species_john_doe_coding*, and so on.
+
+
+### 4.6 Document the new coding
+
+Clearly, when implementing your new species coding by 
+[editing an existing source file](#adapt-source-file), you must adapt the
+existing documentation you find there to the new requirements. However, you must
+not forget to add your coding to the general documentation of species codings
+of the package. You find this in the file *data_species_codings.R* which is
+Roxygen2 code. Add a short description and examples in the same style as you 
+find it for the other codings.
+
+
+### 4.7 Add your new coding to the automated tests for species codings
+
+The package ForestElementsR comprises a suite of automated tests. You must add
+your now coding also there. You find the implementations of the tests in the
+subdirectory */tests/testhat/*; the files you need are called 
+*test_species_coding_consistency*, and *test_species_coding_casts*. See how the
+tests for the other codings are implemented, and follow these examples.
+
+
+### 4.8 **Never** touch the source file *fe_species_helper_functions.R*
+
+The functions in the source file *fe_species_helper_functions.R* were very 
+carefully crafted, and they provide the common technical background for existing
+and future species codings implemented in the package *ForestElementsR*. If you
+fiddle around there without knowing *500% exactly* what you are doing, you will
+almost certainly goof it up.
+
+
+## References

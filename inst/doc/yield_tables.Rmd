@@ -1,0 +1,442 @@
+---
+title: "Yield Tables in ForestElementsR"
+author: "Peter Biber"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+bibliography: REFERENCES.bib
+vignette: >
+  %\VignetteIndexEntry{Yield Tables in ForestElementsR}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## 1 Introduction
+Yield tables might be the most important tools forest science has ever provided
+to forest practice. They represent an invaluable wealth of empirical data that
+has been condensed into tabular descriptions of forest stand growth that are 
+easy to work with. Since about three decades, however, they have been 
+increasingly frowned upon for several reasons, among them their limited 
+applicability to mixed species stands, their inherent restriction to even aged 
+stands only, and  their representation of forest growth under environmental 
+conditions that have meanwhile changed, and cannot be considered as stable as 
+they were at the time when the data behind the tables were collected. 
+Nevertheless, when handled wisely, yield tables can still be highly valuable 
+assets in our tool kit. Therefore, we developed a generic implementation of 
+yield tables in *ForestElementsR* that is designed to work equally well with 
+yield tables of different origin with different specifications and descriptive 
+variables. A collection of yield tables for important tree species in Central 
+Europe has already been implemented and comes readily with *ForestElements*; 
+this collection will certainly keep growing. All readily available tables are 
+listed in the documentation, you can look them up with ```?yield_tables```. 
+The purpose of this vignette is to explain how to work with our yield table 
+implementation.
+
+```{r}
+# Before we start, let's attach the package
+library(ForestElementsR)
+```
+
+
+## 2 Yield Table Representation in ForestElementsR
+Let's have a look to a classic yield table, Wiedemann's 1943 table for Scots
+pine (*Pinus sylvestris*). The bulk information used for our implementation was 
+the version published by the Bavarian State Forest Administration 
+[@hilfstafeln_bavaria_2018], some information that was missing there, was taken
+from the version in Schober's yield table collection 
+[@ertragstafeln_schober_1975] in addition. As any yield table in 
+ForestElementsR, the Wiedemann table for Scots pine is an S3 object of class
+```fe_yield_table```. its representation in the package is called
+```fe_ytable_pine_wiedemann_moderate_1943```. 
+
+```{r}
+class(fe_ytable_pine_wiedemann_moderate_1943)
+```
+
+
+Such an object is essentially a 
+list containing some metadata followed by the actual data. A basic overview can
+be obtained with:
+
+```{r}
+fe_ytable_pine_wiedemann_moderate_1943 |> summary()
+```
+
+The first six list elements represent the metadata, the seventh element, 
+```values```, comprises the actual data.
+
+
+### 2.1 Metadata
+Let's have a look at the metadata first:
+
+```{r}
+fe_ytable_pine_wiedemann_moderate_1943[1:6] # Elements 1-6 contain metadata
+```
+
+The list element ```name_orig``` contains the established original name of the 
+yield table in the language it was originally published in. The second item, 
+```name_international``` is an English translation of the original name. The 
+item ```site_indexes``` is a numeric vector of all site index values that are 
+actually represented in the table with values. The Wiedemann pine table is using
+the traditional European approach of *relative site indexing*, i.e. site index 
+1.0 stands for the best site conditions, while 4.0 or greater represent 
+considerably weak sites. A site index of 1.5 would be in the middle between the 
+best and the second best site represented in the table. In its original form, 
+this traditional site index numbering actually uses roman numerals before and 
+arabic ones after the decimal point (e.g. II.3 = 2.3), but implementing this 
+simply was not worth the effort. More important, our implementation works 
+equally with yield tables that follow the approach of absolute site indexing 
+(which is preferable from our point of view, but not frequently found in German 
+yield tables). Have a look at the ```site_indexes``` entry of the yield table
+by Ernst Assmann and Friedrich Franz for Norway spruce (as taken from
+@hilfstafeln_bavaria_2018):
+
+```{r}
+fe_ytable_spruce_assmann_franz_mean_yield_level_1963$site_indexes
+```
+
+These site indexes represent a stand's dominant height in meters at an age of
+100 years. So, a stand of site index 40 after Assmann and Franz would be 
+expected to be 40 m high when it is 100 years old. As you will see below, we
+have implemented the option to express site quality in terms of such an absolute
+site index also for yield tables with a relative site index system. Back to the
+Wiedemann pine table, the next element of the metadata is called 
+```site_index_variable```. This is a character vector with - typically - one 
+element that provides the name of the variable which is used to determine the 
+site index. As for most German yield tables, for the Wiedemann table it is the 
+quadratic mean height in meters, abbreviated as "h_q_m". This means when the
+quadratic mean height (and the age) of a Scots pine stand is known, its site 
+index can be determined with this yield table. Again, the Assmann-Franz table
+can serve as an example for other possibilities:
+
+```{r}
+fe_ytable_spruce_assmann_franz_mean_yield_level_1963$site_index_variable
+```
+
+This table was designed for site indexing based on the stands dominant height,
+here defined as the quadratic mean height of the 100 tallest trees per hectare,
+called "h_100_m" in our implementation. But in addition, this table also 
+contains the usual quadratic mean stand height, "h_q_m", so we allow both 
+variables to be used for finding a stand's site index. The next metadata element
+we called ```mai_variable```. This relates to the concept of expressing site 
+indexes in terms of the mean annual increment (the German term for this is 
+"DGZ-Bonitierung"). The idea of that approach is to use a yield table with the
+classic input (stand height, age), but to express the site quality in terms of
+the expected mean annual increment ("m.a.i.", German abbreviation "dGz") at a 
+given age or at its maximum (see more details below). The last metadata item,
+```age_coverage``` is a numeric vector of all ages for which the table actually
+provides data. Note, that this is an "outer" age coverage, i.e. not all site
+indexes given in the table must necessarily cover the whole range of values.
+Often, poor site indexes start in the table at a higher age than better ones.
+Sometimes, the age interval might be different for different site indexes. E.g.
+the Wiedemann pine table usually provides values in five year age intervals, but
+in ten-year intervals only for site indexes 5.5 and 6.0. This is also not a
+problem with the age coverage to be given in the metadata; it always relates
+to the highest temporal resolution available in the table.
+
+### 2.2 Actual Yield Table Data
+The yield table data themselves are stored in the list element called 
+```values```. This itself is a named list of matrices, one matrix for each 
+variable given in the yield table, the list element names being the names of the
+variables. Note, that ```fe_yield_table``` objects are not required to have all
+an identical set of variables. In order to find out which variables are given in
+a yield table, you could obtain their names as follows:
+
+```{r}
+fe_ytable_pine_wiedemann_moderate_1943$values |> names()
+```
+
+The order of the variables is not related to their importance, e.g. the first
+variable listed here, *h_q_m_si_pluis_025*, is the lower threshold height for 
+a given site index as by default provided in the Bavarian state forest yield 
+table editions (@hilfstafeln_bavaria_2018, @hilfstafeln_bavaria_1990). For 
+electronic site indexing this variable is not required, we kept it, however,
+test and documentation purposes. Of central importance, in contrast, are the
+variables which are used for the actual site indexing. In the Wiedemann pine
+table, this is  ```h_q_m"```, the quadratic mean stand height, as indicated 
+in the metadata. As for any other variable in the yield table, it can be simply 
+displayed as follows:
+
+```{r}
+fe_ytable_pine_wiedemann_moderate_1943$values$h_q_m
+```
+
+The columns of the matrix correspond to the site indexes given in the metadata.
+They are represented in the column names with the prefix "si_". Each matrix row
+stands for a specific stand age, whereby the stand ages are the row names. The 
+NA values are places where no value is given in the table, typically with low 
+site indexes at younger ages or with broader age intervals. All other variables
+in the table are given as a matrices of exactly the same structure, take e.g.
+the periodic annual increment ```pai_m3_ha_yr```:
+
+```{r}
+fe_ytable_pine_wiedemann_moderate_1943$values$pai_m3_ha_yr
+```
+
+Before we come to visualizing yield table contents, let us shortly explain the
+variable names used in the Wiedemann pine table, as we are sticking as close as
+possible to this naming concept in any yield table we make a part of 
+ForestElementsR. Note, however, that not all of these variables are necessarily
+contained in all tables we have included so far; some tables might also contain
+additional variables and (unfortunately) use other than metric units. For 
+creating a working ```fe_yield_table``` object it is not necessary to stick to a
+certain naming concept although we highly recommend to do so. Let's explain the 
+variable names given above, beginning whith those that are common in most yield 
+tables:
+
+* **h_q_m**: Quadratic mean stand height (m)
+* **d_q_cm**: Quadratic mean diameter at breast height (cm)
+* **n_ha**: Number of trees per ha
+* **ba_m2_ha**: Stand basal area (m²/ha)
+* **v_m3_ha** : Stand wood volume (m³/ha)
+* **tvp_m³_ha**: Total volume production (m³/ha)
+* **mai_m³_ha_yr**: Mean annual volume increment (m³/ha/yr), i.e. the total 
+  volume production divided by the stand age
+* **pai_m3_ha_yr**: Periodic mean annual increment (m³/ha/yr), i.e. the 
+  difference of the total volume production for two subsequent points in time
+  divided by the corresponding time interval 
+* **pai_perc_yr**: Annual relative periodic increment (%/yr)  
+
+As the Wiedemann pine table was imported from the edition provided by the
+Bavarian State Forest Service [@hilfstafeln_bavaria_2018], there are some
+peculiarities: Some of the variable names carry the prefix "red_". This means,
+while volume-related values are usually, to be understood as m³ standing wood 
+over bark, the prefix "red_" ("reduced") indicates, that such wood volumes are 
+to be understood under bark and after subtracting losses due to the harvest.
+This explains the variable names **red_v_m3_ha**, **red_mai_m3_ha_yr**, and
+**red_pai_m3_ha_yr**. Another peculiarity of the Bavarian table edition is the
+scarce information about the removal stand. For a given stand age, it provides 
+only the harvest volume for the subsequent decade, also under bark, and after
+harvest, hence the name **red_pre_yield_m3_ha_10yr**. More information about the
+removal stand in yield tables will be provided (if available from other table
+editions such as @ertragstafeln_schober_1975) in future versions of 
+*ForestElementsR*.
+
+## 3 Visualizing Yield Table Contents
+For visualization purposes whe have written a plot method for 
+```fe_yield_table``` objects.
+
+```{r, fig.width=4.9, fig.height=4.9, fig.align="center"}
+# Plot the quadratic mean height (site index fan)
+fe_ytable_pine_wiedemann_moderate_1943 |> plot()
+```
+
+When the plot function is called without further arguments, it displays the 
+first variable listed as ```site_index_variable``` in the object's metadata.
+Typically this results in a display of a "site index fan". All other variables 
+contained in the ```fe_yield_table``` object can be plotted by specifiying 
+their name in the call:
+
+```{r, fig.width=4.9, fig.height=4.9, fig.align="center"}
+# Plot the periodic annual increment
+fe_ytable_pine_wiedemann_moderate_1943 |> plot(variable = "pai_m3_ha_yr")
+```
+
+The plots are *ggplot* objects whose appearance can be partly modified in a 
+post-hoc manner if required, e.g.
+
+```{r, fig.width=4.9, fig.height=4.9, fig.align="center"}
+# Plot the tree number per ha and modify the plot's appearance
+# 1 catch the plot
+v_plot <- fe_ytable_pine_wiedemann_moderate_1943 |> plot(variable = "n_ha")
+
+# 2 make adjustments as allowed by ggplot2, e.g.
+v_plot + 
+  ggplot2::theme_classic() +     # Appearance similar to R base graphics
+  ggplot2::scale_y_log10() +     # Logarithmic scale for vertical axis
+  ggplot2::ylab("Tree Number per hectare") # More explaining axis label
+```
+
+
+## 4 Practical Work With Yield Tables in ForestElementsR
+### 4.1 Site Indexing
+The fundamental task in working with yield tables is finding the site index of a 
+given stand. This requires two input variables, the stand's age, and the stand's
+height, defined as (one of) the yield table's site index variable. For the 
+Wiedemann pine table this is the quadratic mean height in meters. The function
+to be used is called ```site_index()```. Let's have a look at some examples:
+
+```{r}
+ytab <- fe_ytable_pine_wiedemann_moderate_1943 # store the yield table in a
+                                               # variable with a shorter name
+                                               # for convenience
+
+# Assume a stand age of 73 years and a quadratic mean height of 19.7 m
+si <- site_index(age = 72, size = 19.7, ytable = ytab, si_variable = "h_q_m")
+si # The stand's relative site index according to the table
+si |> round(digits = 1) # usually relative site indexes are rounded to one digit
+
+# Same height, but twenty years younger
+site_index(age = 52, size = 19.7, ytable = ytab, si_variable = "h_q_m") |>
+  round(digits = 1)
+
+# Same height, but thirty years older
+site_index(age = 102, size = 19.7, ytable = ytab, si_variable = "h_q_m") |>
+  round(digits = 1)
+```
+
+Input values for stand ages that are not exactly given in the table, as in the 
+examples above, are made use of by linear interpolation between the values given
+in the corresponding matrix. Site index values that are outside the site index
+fan, are obtained by linear extrapolation. This is the case in the second 
+example, where we obtain a site index of 0.9 which reflects better site 
+conditions than assumed by the best site index given in the table (i.e. 1.0).
+If a stand age provided by the user is beyond the age coverage of the yield
+table (as provided in the ```fe_yield_table``` object's slot 
+```age_coverage```), a warning is issued, and the age that is internally used is
+set to the nearest value covered in the table:
+
+```{r}
+site_index(age = 171, size = 30.4, ytable = ytab, si_variable = "h_q_m")
+site_index(age = 12, size = 9.2, ytable = ytab, si_variable = "h_q_m")
+```
+
+Obviously, site indexing can be done on input vectors, in the following example
+we are doing this by way of the function ```map2_dbl``` from the *purrr*
+package:
+
+```{r}
+age <- c(35,   25,   120, 75,   42,    53)
+h_q <- c(14.3, 9.1, 22.2, 13.6, 11.0,  21.7)
+
+si_vec <- purrr::map2_dbl(
+  .x = age, 
+  .y = h_q, 
+  .f = function(x, y, yt, si_v) site_index(x, y, yt, si_v), 
+  yt = ytab, 
+  si_v = "h_q_m"
+) |>
+  round(digits = 1)
+
+si_vec
+```
+
+In order to convert this site index into a mean annual increment (mai) site 
+index (German: "DGZ-Bonität"), there are two options. First, the conversion can 
+be made to the expected mai at a given age, typically 100 years. This is 
+achieved with the function ```si_to_mai_age```:
+
+```{r}
+# Obtain the expected mean annual increment at age 100 for a stand with the
+# relative site index 1.2
+si_to_mai_age(
+  si = 1.2, mai_variable = "mai_m3_ha_yr", age = 100, ytable = ytab
+)
+
+# Do the same for the site index vector we generated above
+si_vec
+
+purrr::map_dbl(
+  .x = si_vec,
+  .f = function(x, ma_v, age, yt) si_to_mai_age(x, ma_v, age, yt),
+  ma_v = "mai_m3_ha_yr",
+  age  = 100,
+  yt   = ytab
+)
+```
+
+The second option is not to determine the mai site index at a given age, but to
+take the maximum mai, that does typically occur not at the same age among 
+different site qualities (earlier on good sites, later on poor sites).
+The function ```si_to_mai_max``` was written for that purpose:
+
+```{r}
+# Obtain the expected maximum mean annual increment for a stand with the
+# relative site index 1.2
+si_to_mai_max(
+  si = 1.2, mai_variable = "mai_m3_ha_yr", ytable = ytab
+)
+
+# Do the same for the site index vector we generated above
+si_vec
+
+purrr::map_dbl(
+  .x = si_vec,
+  .f = function(x, ma_v, yt) si_to_mai_max(x, ma_v, yt),
+  ma_v = "mai_m3_ha_yr",
+  yt   = ytab
+)
+```
+
+Note that in some cases, especially when extrapolating with site indexes that 
+are above the best site covered in a yield table, the obtained mai max site 
+index might be smaller than the mai site index obtained for an age that is near
+the maximum mai. Unfortunately, such subtle inconsistencies are in the very 
+nature of yield tables in general, and cannot be avoided. In order to convert 
+relative site indexes into absolute ones, e.g. the expected stand height at an
+age of 100 years, you can use the function ```ytable_lookup``` which is the 
+general means to draw values out of yield tables, once the site index is known:
+
+```{r}
+# Obtain the expected stand height at age 100 for a stand with the relative
+# site index 1.2 (this actually converts a relative into an absolute site index)
+si_abs <- ytable_lookup(age = 100, si = 1.2, variable = "h_q_m", ytable = ytab)
+si_abs
+si_abs |> round(digits = 1)
+
+# Let's to this again for the whole site index vector from above.
+# Reasonably, we obtain warnings, if we use site indexes beyond range of the 
+# yield table
+si_abs_vec <- purrr::map_dbl(
+  .x = si_vec,
+  .f = function(x, age, var, yt) ytable_lookup(age, x, var, yt),
+  age = 100,
+  var = "h_q_m",
+  yt   = ytab
+)
+
+si_abs_vec |> round(digits = 1)
+
+```
+
+### 4.2 Extracting Values From Yield Tables
+The key function for extracting desired values from yield tables, once the site
+index is known, is ```ytable_lookup``` as already shown above when the task was
+to obtain absolute site indexes from relative ones. Let us give some more 
+examples here:
+
+```{r}
+# Get the periodic annual increment:
+ytable_lookup(age = 100, si = 1.2, variable = "pai_m3_ha_yr", ytable = ytab)
+
+# Try to go beyond the table's age coverage (raises warning)
+ytable_lookup(age = 170, si = 1.2, variable = "pai_m3_ha_yr", ytable = ytab)
+
+# ... standing volume
+ytable_lookup(age = 73, si = 2.4, variable = "v_m3_ha", ytable = ytab)
+
+# Use a site index above the table's coverage (raises warning)
+ytable_lookup(age = 73, si = 0.4, variable = "v_m3_ha", ytable = ytab)
+
+# ... basal area
+ytable_lookup(age = 41, si = 3.4, variable = "ba_m2_ha", ytable = ytab)
+
+# Use a site index below the table's coverage
+ytable_lookup(age = 41, si = 6.2, variable = "ba_m2_ha", ytable = ytab)
+```
+
+This way, any variable that is contained in the ```fe_yield_table``` object can
+be easily accessed. Vectorized application is available with standard R 
+functionality (we prefer the functions from the *purrr* package, but the *apply*
+family of standard R works as well).
+
+
+## 5 Importing Yield Table Data and Make them fe_yield_table Objects
+The key function for transoforming your own data into valid and fully functional 
+```fe_yield_table``` objects is ```fe_yield_table```. We will add some more 
+explanations here; for the time being, be referred to the function's 
+documentation. You can access it with ```?fe_yield_table```.
+
+## References
