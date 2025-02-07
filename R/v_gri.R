@@ -56,7 +56,10 @@
 #' @param dbh_cm Vector of tree dbh values in cm (dbh = stem diameter at breast
 #'   height, i.e. 1.3 m)
 #'
-#' @param height_m Vector of tree height values in m
+#' @param height_m Vector of tree height values in m. While missing values in
+#'   \code{species_id} and \code{dbh_cm} are not allowed, they are accepted
+#'   in \code{height_m} but \code{v_gri} will return \code{NA} and trigger a
+#'   warning.
 #'
 #' @return A vector of merchantable standing tree wood volumes over bark in m³.
 #'   "Merchantable" means only wood with a minimum diameter of 7 cm over bark is
@@ -167,11 +170,20 @@ v_gri.fe_species_bavrn_state_short <- function(species_id, dbh_cm, height_m) {
 #'
 v_gri_core <- function(species_id, dbh_cm, height_m, v_param) {
 
-  # Check for missing values in the arguments and terminate if there are any
+  # Check for missing values in the first two arguments and terminate if there
+  # are any
   if (any(
-    c(any(is.na(species_id)), any(is.na(dbh_cm)), any(is.na(height_m)))
+    c(any(is.na(species_id)), any(is.na(dbh_cm)))
   )) {
-    stop("No missing values allowed in arguments to v_gri()")
+    stop(
+      "No missing species_id or dbh_cm values allowed in arguments to v_gri()"
+    )
+  }
+
+  # Check for missing values of height_m and issue a warning if there are any.
+  # Missing height values will lead to NA values in the output of v_gri_core
+  if (any(is.na(height_m))) {
+    warning("NAs generated due to missing height values")
   }
 
   # get data in a workable format
@@ -191,7 +203,9 @@ v_gri_core <- function(species_id, dbh_cm, height_m, v_param) {
   # calculate the volume(s)
   work_dat |> purrr::pmap_dbl(
     .f = function(dbh_cm, height_m, C) { # Using capital C as in Franz' notation
-      if ((dbh_cm < 6.1) | (height_m < 1.3)) {
+      # NA heights should pass the following filter (and lead to NA results in
+      # the volume calculation)
+      if (!is.na(height_m) &  ((dbh_cm < 6.1) | (height_m < 1.3))) {
         return(0) # trees below a certain size have 0 m^3 of merchantable volume
       } else {
         # Franz' equation system; using capital C and A as in Franz' notation

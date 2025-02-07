@@ -28,7 +28,9 @@
 #' Alternatively, the d100, h100 method by Assmann can be selected. This should
 #' be, however, done with care, because d100 and h100 are only well defined
 #' in monospecific stands. Note, that this function does not take into account
-#' species shares in mixed stands when calculating d100 and h100.
+#' species shares in mixed stands when calculating d100 and h100. If the tree
+#' heights in the input object contain missing values, the output variables
+#' requiring height information will be \code{NA}.
 #'
 #'
 #' @param x An \code{\link{fe_stand}} object
@@ -56,7 +58,9 @@
 #'   \code{tree_filter}, as defined above, an empty data frame is returned. In
 #'   case an object of class \code{fe_ccircle_spatial_notrees} (which is a
 #'   special child of \code{\link{fe_stand}}) is provided as input \code{x}, the
-#'   function also returns an empty data frame.
+#'   function also returns an empty data frame. In case the tree heights in the
+#'   input object contain missing values, the output variables requiring
+#'   height information will be \code{NA}.
 #'
 #'
 #' @export
@@ -80,6 +84,13 @@
 #' # and diameter
 #' mm_forest_1_fe_stand_spatial |>
 #'   stand_sums_static(hd_dom_method = "Assmann")
+#'
+#' # Incomplete height information leads to missing values in all variables
+#' # that require height as an input
+#' demo_stand <- spruce_beech_1_fe_stand     # Copy an existing fe_stand object
+#' index <- seq(2:nrow(demo_stand$trees))    # remove every 2nd height
+#' demo_stand$trees[index, ]$height_m <- NA
+#' demo_stand |> stand_sums_static()
 #'
 stand_sums_static <- function(x,
                               tree_filter = TRUE,
@@ -113,18 +124,15 @@ stand_sums_static <- function(x,
 
   # Calculate (ha-scaled) tree volumes here, because this is much faster than
   # doing inside the call to summarise below. Trees without height get an NA
-  # volume
+  # volume automatically, so no check required here
   suppressWarnings(
     work_dat$trees <- work_dat$trees |>
-      dplyr::mutate(.v_temp = ifelse(is.na(.data$height_m),
-        NA,
-        .data$n_rep_ha *
-          v_gri(
-            .data$species_id,
-            .data$dbh_cm,
-            .data$height_m
-          )
-      ))
+      dplyr::mutate(.v_temp = .data$n_rep_ha * v_gri(
+                                                  .data$species_id,
+                                                  .data$dbh_cm,
+                                                  .data$height_m
+                                               )
+      )
   )
 
   # The choice for how to calculate dominant heights and diameters must be
@@ -141,7 +149,7 @@ stand_sums_static <- function(x,
       basal_area_m2_ha = sum((.data$dbh_cm / 100)^2 * pi / 4 * .data$n_rep_ha),
       d_q_cm = d_q(.data$dbh_cm, .data$n_rep_ha),
       d_dom_cm = if (nn == 0) {
-        NA
+        NA_real_
       } else {
         switch(hd_dom_method,
           Weise   = d_dom_weise(.data$dbh_cm, .data$n_rep_ha),
@@ -149,12 +157,12 @@ stand_sums_static <- function(x,
         )
       },
       h_q_m = if (any(is.na(.data$height_m))) {
-        NA
+        NA_real_
       } else {
         h_q(.data$height_m, .data$dbh_cm, .data$n_rep_ha)
       },
       h_dom_m = if ((nn == 0) | any(is.na(.data$height_m))) {
-        NA
+        NA_real_
       } else {
         switch(hd_dom_method,
           Weise = h_dom_weise(

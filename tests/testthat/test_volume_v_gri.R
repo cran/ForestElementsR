@@ -177,6 +177,32 @@ test_that("volumes for tum_wwk_short and bavrn_state_short match where they shou
 })
 
 
+test_that("Missing value handling is correct", {
+
+  expect_error(
+    # Missing species_id
+    v_gri(c(rep(1, 4), NA), c(30, 24, 50, 42, 17), c(29, 19, 39, 37, 18))
+  )
+  expect_error(
+    # Missing dbh_cm
+    v_gri(rep(1, 5), c(30, NA, 50, 42, 17), c(29, 19, 39, 37, 18))
+  )
+  expect_warning(
+    # Missing height_m
+    v_test <- v_gri(rep(1, 5), c(30, 24, 50, 42, 17), c(29, 19, 39, NA, 18))
+  )
+  expect_true(
+    # Missing height_m generates NA result
+    is.na(v_test[4])
+  )
+  expect_true(
+    # Non-missing height_m generate non-NA result even though there are NAs in
+    # the same input vector
+    all(!is.na(v_test[c(1, 2, 3, 5)]))
+  )
+})
+
+
 
 
 

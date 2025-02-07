@@ -26,7 +26,10 @@ error is thrown and the function terminates.}
 \item{dbh_cm}{Vector of tree dbh values in cm (dbh = stem diameter at breast
 height, i.e. 1.3 m)}
 
-\item{height_m}{Vector of tree height values in m}
+\item{height_m}{Vector of tree height values in m. While missing values in
+\code{species_id} and \code{dbh_cm} are not allowed, they are accepted
+in \code{height_m} but \code{v_gri} will return \code{NA} and trigger a
+warning.}
 }
 \value{
 A vector of merchantable standing tree wood volumes over bark in m³.

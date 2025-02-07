@@ -31,7 +31,9 @@ quadratic mean height, dominant height. If no tree in \code{x$trees} passes
 \code{tree_filter}, as defined above, an empty data frame is returned. In
 case an object of class \code{fe_ccircle_spatial_notrees} (which is a
 special child of \code{\link{fe_stand}}) is provided as input \code{x}, the
-function also returns an empty data frame.
+function also returns an empty data frame. In case the tree heights in the
+input object contain missing values, the output variables requiring
+height information will be \code{NA}.
 }
 \description{
 Calculate ha-wise static stand sum and mean values for a fe_stand object. The
@@ -44,7 +46,9 @@ Weise, i.e. quadratic mean diameter and height for the 20\% biggest trees.
 Alternatively, the d100, h100 method by Assmann can be selected. This should
 be, however, done with care, because d100 and h100 are only well defined
 in monospecific stands. Note, that this function does not take into account
-species shares in mixed stands when calculating d100 and h100.
+species shares in mixed stands when calculating d100 and h100. If the tree
+heights in the input object contain missing values, the output variables
+requiring height information will be \code{NA}.
 }
 \examples{
 # Evaluation for all trees
@@ -65,5 +69,12 @@ mm_forest_1_fe_stand_spatial |>
 # and diameter
 mm_forest_1_fe_stand_spatial |>
   stand_sums_static(hd_dom_method = "Assmann")
+
+# Incomplete height information leads to missing values in all variables
+# that require height as an input
+demo_stand <- spruce_beech_1_fe_stand     # Copy an existing fe_stand object
+index <- seq(2:nrow(demo_stand$trees))    # remove every 2nd height
+demo_stand$trees[index, ]$height_m <- NA
+demo_stand |> stand_sums_static()
 
 }
