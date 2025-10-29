@@ -40,25 +40,25 @@ yield tables of different origin with different specifications and descriptive
 variables. A collection of yield tables for important tree species in Central 
 Europe has already been implemented and comes readily with *ForestElements*; 
 this collection will certainly keep growing. All readily available tables are 
-listed in the documentation, you can look them up with ```?yield_tables```. 
+listed in the documentation, and you can look them up with ```?yield_tables```. 
 The purpose of this vignette is to explain how to work with our yield table 
 implementation.
 
 ```{r}
-# Before we start, let's attach the package
+# Before we start, let us attach the package
 library(ForestElementsR)
 ```
 
 
 ## 2 Yield Table Representation in ForestElementsR
-Let's have a look to a classic yield table, Wiedemann's 1943 table for Scots
+Let us have a look at a classic yield table, Wiedemann's 1943 table for Scots
 pine (*Pinus sylvestris*). The bulk information used for our implementation was 
 the version published by the Bavarian State Forest Administration 
-[@hilfstafeln_bavaria_2018], some information that was missing there, was taken
+[@hilfstafeln_bavaria_2018], some information that was missing there was taken
 from the version in Schober's yield table collection 
 [@ertragstafeln_schober_1975] in addition. As any yield table in 
 ForestElementsR, the Wiedemann table for Scots pine is an S3 object of class
-```fe_yield_table```. its representation in the package is called
+```fe_yield_table```. Its representation in the package is called
 ```fe_ytable_pine_wiedemann_moderate_1943```. 
 
 ```{r}
@@ -89,7 +89,7 @@ The list element ```name_orig``` contains the established original name of the
 yield table in the language it was originally published in. The second item, 
 ```name_international``` is an English translation of the original name. The 
 item ```site_indexes``` is a numeric vector of all site index values that are 
-actually represented in the table with values. The Wiedemann pine table is using
+actually represented in the table with values. The Wiedemann pine table uses
 the traditional European approach of *relative site indexing*, i.e. site index 
 1.0 stands for the best site conditions, while 4.0 or greater represent 
 considerably weak sites. A site index of 1.5 would be in the middle between the 
@@ -193,7 +193,7 @@ contained in all tables we have included so far; some tables might also contain
 additional variables and (unfortunately) use other than metric units. For 
 creating a working ```fe_yield_table``` object it is not necessary to stick to a
 certain naming concept although we highly recommend to do so. Let's explain the 
-variable names given above, beginning whith those that are common in most yield 
+variable names given above, beginning with those that are common in most yield 
 tables:
 
 * **h_q_m**: Quadratic mean stand height (m)
@@ -201,8 +201,8 @@ tables:
 * **n_ha**: Number of trees per ha
 * **ba_m2_ha**: Stand basal area (m²/ha)
 * **v_m3_ha** : Stand wood volume (m³/ha)
-* **tvp_m³_ha**: Total volume production (m³/ha)
-* **mai_m³_ha_yr**: Mean annual volume increment (m³/ha/yr), i.e. the total 
+* **tvp_m3_ha**: Total volume production (m³/ha)
+* **mai_m3_ha_yr**: Mean annual volume increment (m³/ha/yr), i.e. the total 
   volume production divided by the stand age
 * **pai_m3_ha_yr**: Periodic mean annual increment (m³/ha/yr), i.e. the 
   difference of the total volume production for two subsequent points in time
@@ -386,8 +386,8 @@ si_abs <- ytable_lookup(age = 100, si = 1.2, variable = "h_q_m", ytable = ytab)
 si_abs
 si_abs |> round(digits = 1)
 
-# Let's to this again for the whole site index vector from above.
-# Reasonably, we obtain warnings, if we use site indexes beyond range of the 
+# Let us do this again for the whole site index vector from above.
+# Reasonably, we obtain warnings if we use site indexes beyond the range of the 
 # yield table
 si_abs_vec <- purrr::map_dbl(
   .x = si_vec,

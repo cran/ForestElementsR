@@ -1,7 +1,7 @@
 Package: ForestElementsR
 Title: Data Structures and Functions for Working with Forest Data
-Version: 2.1.0
-Date: 2025-02-07
+Version: 2.2.0
+Date: 2025-10-28
 Authors@R: 
     c(
       person("Peter", "Biber", email = "p.biber@tum.de", 
@@ -23,20 +23,22 @@ Description: Provides generic data structures and algorithms for use with forest
     <doi:10.1007/978-1-4020-5991-9>.
 License: GPL (>= 3)
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: magrittr, ggplot2, tibble, dplyr, purrr, rlang, Rdpack, tidyr,
         vctrs, stringr, tidyselect (>= 1.2.0), doBy
 RdMacros: Rdpack
-Depends: R (>= 4.3), sf
+Depends: R (>= 4.4), sf
 LazyData: true
 Suggests: knitr, rmarkdown, testthat (>= 3.2.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2025-02-07 12:43:19 UTC; casto
-Author: Peter Biber [aut, cre, cph] (<https://orcid.org/0000-0002-9700-8708>),
-  Astor Toraño Caicoya [aut] (<https://orcid.org/0000-0002-9658-8990>),
-  Torben Hilmers [ctb] (<https://orcid.org/0000-0002-4982-8867>)
+Packaged: 2025-10-29 17:07:51 UTC; casto
+Author: Peter Biber [aut, cre, cph] (ORCID:
+    <https://orcid.org/0000-0002-9700-8708>),
+  Astor Toraño Caicoya [aut] (ORCID:
+    <https://orcid.org/0000-0002-9658-8990>),
+  Torben Hilmers [ctb] (ORCID: <https://orcid.org/0000-0002-4982-8867>)
 Maintainer: Peter Biber <p.biber@tum.de>
 Repository: CRAN
-Date/Publication: 2025-02-07 13:00:07 UTC
+Date/Publication: 2025-10-29 17:30:02 UTC

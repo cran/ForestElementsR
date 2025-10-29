@@ -10,8 +10,7 @@ ytable_max_slice(variable, ytable)
 \item{variable}{Name of the yield table variable for which the slice is to
 be taken}
 
-\item{ytable}{Name of the yield table variable for which the slice is to
-be taken}
+\item{ytable}{An object of class \code{\link{fe_yield_table}}}
 }
 \value{
 A (named) vector representing the max slice of the desired

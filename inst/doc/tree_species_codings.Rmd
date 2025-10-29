@@ -44,7 +44,7 @@ Before I show how to actually work with species codings in
 codings in the package. For the code examples below to work, you will
 need to attach *ForestElementsR* itself, and the packages *tibble*,
 *dplyr*, and *ggplot2* from the
-[*tidyverse*](https://www.tidyverse.org/) which make handling and output
+[*tidyverse*](https://tidyverse.org/) which make handling and output
 more convenient.
 
 ```{r setup, message = FALSE}
@@ -56,13 +56,13 @@ library(ggplot2)
 
 ### 2.1 The species master table {#species_master_table}
 
-The *data.frame* (actually, a *tibble*) *species_master_table* is the
+The *data.frame* (actually a *tibble*) *species_master_table* is the
 most important part of the generic species coding system. Any single
 species to be included in any specific coding must be absolutely listed
 here, as the species master table serves as the common reference for all
 implemented codings. Conversely, specific species codings do not need to
 comprise all species provided in the species master table. In order to
-view this table it is only necessary to type its name:
+view this table, it is only necessary to type its name:
 
 ```{r view_species_master_table}
 species_master_table
@@ -88,7 +88,7 @@ New species can be easily added without the danger of running out of
 numbers and being thus forced to break the coding concept. For
 convenience, the table also contains the column *deciduous_conifer*
 which allows only for the two values *conif* and *decid*. This column is
-not part of the actual species key, but it it is intended for filtering
+not part of the actual species key, but it is intended for filtering
 purposes, and for all relevant forest tree species, the distinction
 between both groups should be biologically correct or at least
 practical. The three remaining fields, *name_sci*, *name_eng*, and
@@ -130,7 +130,7 @@ have in common the columns *genus*, *species_no*, *deciduous_conifer*,
 *name_sci*, *name_eng*, and *name_ger*. Most importantly, however, there
 is the additional column *species_id*. This column contains the actual
 coding, and it is always of type character, even if the coding is
-exlusively consisting of numbers. Such a coding table is not required to
+exclusively consisting of numbers. Such a coding table is not required to
 comprise all species available in the species master table, but it must
 not contain any species which is not included there. In other words, a
 coding table is not allowed to contain any combination of *genus* and
@@ -138,7 +138,7 @@ coding table is not allowed to contain any combination of *genus* and
 species names, however, may differ from those in the master table in
 order to allow e.g. for regional colloquial naming preferences or, more
 importantly, for naming species groups which, by definition, do not
-exist in the master table. Let's have a view on the coding in compact
+exist in the master table. Let us have a view on the coding in compact
 form:
 
 ```{r view_coding_compact}
@@ -149,7 +149,7 @@ fe_species_get_coding_table("tum_wwk_short") |>
 
 As it is easily visible in this display, the coding distinguishes only
 ten species (groups). From the names, it can be already guessed which
-species_id's refer to single species and which to groups, but we should
+species_ids refer to single species and which to groups, but we should
 use R to find this out unambiguously:
 
 ```{r view_species_numbers_in_coding}
@@ -184,13 +184,13 @@ species_master_table |>
 #### 2.1.2 Implemented codings {#implemented_codings}
 
 Six species codings are currently implemented. While their
-documentation in the package and can be accessed with
+documentation is available in the package, and can be accessed with
 `?species_codings`, I list them also here:
 
 -   **master:** This is the original species coding used by the package
     *ForestElementsR*. It contains each species from the
     *species_master_table* and no species groups. This coding
-    corresponds directly to the species_master_table. Its species_id's
+    corresponds directly to the species_master_table. Its species_ids
     are the master table's columns *genus* and *species_no* combined
     into one character string, separated by an underscore.
 
@@ -273,7 +273,7 @@ is_fe_species_tum_wwk_short(spec_ids)
 is_fe_species_bavrn_state(spec_ids)
 ```
 
-NA values are in principle allowed in species code vectors, there may
+NA values are in principle allowed in species code vectors. There may
 be, however, objects (like *fe_stand*, covered in an own vignette) which
 enforce species code vectors without NAs.
 
@@ -555,7 +555,7 @@ dat |> summary()
 options(fe_spec_lang = opt_help)
 ```
 
-Very similar as in a summary for a *factor* the summary for the column
+Very similar to a summary for a *factor*, the summary for the column
 *species_id* provides the row counts for each of the four coded species.
 In order to display species names instead of the codes, we have to set
 the option *fe_spec_lang* (see also above):
@@ -683,7 +683,7 @@ and detail on them below:
   *exactly* know what you are doing. 
 
 Before we get into the details, note that all species codings inherit from the
-*vctrs_vctr* class which is provided by the package [*vctrs*](https://vctrs.r-lib.org/index.html):
+*vctrs_vctr* class, which is provided by the package [*vctrs*](https://vctrs.r-lib.org/index.html):
 
 ```{r all_inherit_from_vctrs}
 fe_species_bavrn_state("30") |> class()
@@ -701,7 +701,7 @@ detail.
 
 ### 4.1 Check for new species and add them to the species master table
 
-If you plan to implement a new species coding, care fully check the [species 
+If you plan to implement a new species coding, carefully check the [species 
 master table](#species_master_table) if there is any species in your coding
 which is not covered which is not listed in the master table, yet. If it is not,
 you can add it as a new row. Probably, the *genus* where your new species 
@@ -748,12 +748,12 @@ with the entries in *genus* and *species_no*. All your species must be listed
 in the master table, but your coding is not required to cover all species of
 the master table. The species names in your code table may differ from those
 in the master table; when [displaying names](#display_options), those of your 
-code table are used. Note that no NA's at all are allowed in your code table.
+code table are used. Note that no NAs at all are allowed in your code table.
 
-if you give the same *species_id* to several species in the code table, these
+If you give the same *species_id* to several species in the code table, these
 species will be treated as a group. As species name in the code table, you must
 then use the same group name for all these species. Look into the existing 
-codings for examples, e.g. the species_id's 8, 9, and 10 in the coding *tum_wwk_short*.
+codings for examples, e.g. the species_ids 8, 9, and 10 in the coding *tum_wwk_short*.
 
 
 ### 4.4 Copy the R-source file of an existing coding and adapt it {#adapt-source-file}

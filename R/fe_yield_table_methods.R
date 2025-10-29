@@ -50,15 +50,23 @@
 #'   # Get the yield table heights of the Wiedemann 1943 Scots pine table at age
 #'   # 73
 #'   ytable_age_slice(
-#'     fe_ytable_pine_wiedemann_moderate_1943,
 #'     age = 73,
-#'     variable = "h_q_m"
+#'     variable = "h_q_m",
+#'     fe_ytable_pine_wiedemann_moderate_1943
 #'   )
 #'
 #'
 ytable_age_slice <- function(age, variable, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
+
+  # Prevent vectorized input
+  if (length(age) > 1) {
+    stop("Input 'age' must not have length > 1.", call. = TRUE)
+  }
+  if (length(variable) > 1) {
+    stop("Input 'variable' must not have length > 1.", call. = TRUE)
+  }
 
   # Keep input constrained
   if (age < min(ytable$age_coverage)) {
@@ -123,8 +131,7 @@ ytable_age_slice <- function(age, variable, ytable) {
 #' @param variable Name of the yield table variable for which the slice is to
 #'   be taken
 #'
-#' @param ytable Name of the yield table variable for which the slice is to
-#'   be taken
+#' @param ytable An object of class \code{\link{fe_yield_table}}
 #'
 #' @return A (named) vector representing the max slice of the desired
 #'   yield table variable. The names are the site indexes as defined in the
@@ -141,6 +148,11 @@ ytable_age_slice <- function(age, variable, ytable) {
 ytable_max_slice <- function(variable, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
+
+  # Prevent vectorized input
+  if (length(variable) > 1) {
+    stop("Input 'variable' must not have length > 1.", call. = TRUE)
+  }
 
   if (!(variable %in% names(ytable$values))) {
     stop(
@@ -189,6 +201,18 @@ site_index <- function(age, size, ytable, si_variable) {
 
   stopifnot(is_fe_yield_table(ytable))
 
+  # Prevent vectorized input
+  if (length(age) > 1) {
+    stop("Input 'age' must not have length > 1.", call. = TRUE)
+  }
+  if (length(size) > 1) {
+    stop("Input 'size' must not have length > 1.", call. = TRUE)
+  }
+  if (length(si_variable) > 1) {
+    stop("Input 'si_variable' must not have length > 1.", call. = TRUE)
+  }
+
+  # si_variable valid for site indexing?
   if (!(si_variable %in% ytable$site_index_variable)) {
     stop(
       paste0(
@@ -260,6 +284,18 @@ ytable_lookup <- function(age, si, variable, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
 
+  # Prevent vectorized input
+  if (length(age) > 1) {
+    stop("Input 'age' must not have length > 1.", call. = TRUE)
+  }
+  if (length(si) > 1) {
+    stop("Input 'si' must not have length > 1.", call. = TRUE)
+  }
+  if (length(variable) > 1) {
+    stop("Input 'variable' must not have length > 1.", call. = TRUE)
+  }
+
+  # Valid input for variable and si?
   if (!(variable %in% names(ytable$values))) {
     stop(
       paste0(
@@ -343,6 +379,18 @@ si_to_mai_age <- function(si, mai_variable, age, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
 
+  # Prevent vectorized input
+  if (length(si) > 1) {
+    stop("Input 'si' must not have length > 1.", call. = TRUE)
+  }
+  if (length(mai_variable) > 1) {
+    stop("Input 'mai_variable' must not have length > 1.", call. = TRUE)
+  }
+  if (length(age) > 1) {
+    stop("Input 'age' must not have length > 1.", call. = TRUE)
+  }
+
+  # Valid mai_variable?
   if (!mai_variable %in% (ytable$mai_variable)) {
     stop(
       paste0(
@@ -438,6 +486,15 @@ si_to_mai_max <- function(si, mai_variable, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
 
+  # Prevent vectorized input
+  if (length(si) > 1) {
+    stop("Input 'si' must not have length > 1.", call. = TRUE)
+  }
+  if (length(mai_variable) > 1) {
+    stop("Input 'mai_variable' must not have length > 1.", call. = TRUE)
+  }
+
+  # Valid mai_variable?
   if (!mai_variable %in% (ytable$mai_variable)) {
     stop(
       paste0(
@@ -518,6 +575,17 @@ si_to_mai_max <- function(si, mai_variable, ytable) {
 stocking_level <- function(ba, age, si, ytable) {
 
   stopifnot(is_fe_yield_table(ytable))
+
+  # Prevent vectorized input
+  if (length(ba) > 1) {
+    stop("Input 'ba' must not have length > 1.", call. = TRUE)
+  }
+  if (length(age) > 1) {
+    stop("Input 'age' must not have length > 1.", call. = TRUE)
+  }
+  if (length(si) > 1) {
+    stop("Input 'si' must not have length > 1.", call. = TRUE)
+  }
 
   ba_yt <- ytable_lookup(age = age, si = si, variable = "ba_m2_ha", ytable)
 

@@ -39,7 +39,7 @@ based on experiences and procedures made and developed at the former Chair of Fo
 Growth and Yield at the Technical University of Munich. Therefore, the method 
 and object collection covered by the current version of *ForestElementsR* is 
 slightly biased towards German and Bavarian conditions. This is, however, not 
-intended to be a limitation for the the package's future development. For this 
+intended to be a limitation for the package's future development. For this 
 reason - too much pre-definition leads to restriction - *ForestElementsR* does 
 not provide readily defined workflows. It does, in contrast, offer a collection 
 of elementary (hence the name of the package) building blocks that can be 
@@ -67,15 +67,15 @@ hope users will see overarching concepts when they find similarities in the
 naming of our functions and objects, and the composition of function calls. 
 Other, even more important bundling features are the package's open 
 [Species Coding System](#spec_codes) and the hierarchically organized family of
-[objects that represent (samples from) forest stands](#fe_stand_objects)
+[objects that represent (samples from) forest stands](#fe_stand_objects).
 
 With *ForestElementsR* we would like to address a broad audience. 
 **Practitioners** might want to apply it for many purposes from using single 
 functions in a "forest pocket calculator" style to evaluate forest stand surveys 
 by arranging functions in a workchain way. **Scientists** will hopefully find 
 the package useful for carrying out routine evaluations of forest data (like 
-volume estimates, site indexing) that are regular prerequisites for in-dephth 
-scientific analyzes. **Students** could profit from applying *ForestElementR*'s
+volume estimates, site indexing) that are regular prerequisites for in-depth 
+scientific analyses. **Students** could profit from applying *ForestElementR*'s
 functionality to the extensive set of example data that comes with the package.
 We are confident that this would help them to develop an understanding and 
 intuition about quantitative key methods in forestry as well as about the
@@ -89,7 +89,7 @@ original publications correctly in order to give credit to whom it belongs.
 <div style="border: 2px solid #0073e6; padding: 10px; border-radius: 5px; 
 background-color: #f9f9f9;">
   Before we proceed, let us put out an **Important Warning**:
-  While the functions and objects we provide with *ForestElemensR* behave 
+  While the functions and objects we provide with *ForestElementsR* behave 
   exactly as described in the documentation, professional training in the fields 
   of forestry, forest management, forest science is required to apply them 
   correctly and to understand what their output actually means. If you are a
@@ -101,7 +101,7 @@ background-color: #f9f9f9;">
 </div>
 
 \
-In the following sections we give an overview about the most important features
+In the following sections we give an overview of the most important features
 of *ForestElementsR*. We do not delve deeply into all details as these can be
 taken from the specific documentations provided for each function. For two major 
 features, namely the [species coding system](tree_species_codings.html), and the
@@ -138,7 +138,7 @@ spruce_beech_1_fe_stand
 
 An fe_stand object is evidently a list-like object; its most important element
 is the data frame (tibble) "trees", which contains all trees that were measured
-individually and have a dbh. Note, that the element *small_trees* is 
+individually and have a dbh. Note that the element *small_trees* is 
 still experimental and not yet used by any function we provide with 
 *ForestElementsR*. It is intended to, in the future, provide a technical home 
 for trees so small that they do not have a dbh (i.e. trees with heights < 1.3 m) 
@@ -193,7 +193,7 @@ mm_forest_1_fe_stand_spatial$outline |>
 
 ```
 
-An important special child of ```fe_stand_spatial``` is ´the 
+An important special child of ```fe_stand_spatial``` is the 
 ```fe_ccircle_spatial``` object. It is a generic container for sample plots with
 a concentric circle design. A multitude of such objects can be used for
 representing entire sample forest inventories. The latter is actually the 
@@ -211,7 +211,7 @@ spruce_pine_ccircle_spatial |> plot(dbh_scale = 3) # oversize dbh x3
 options(oo)        # Reset species name display option
 ```
 
-We provide user friendly functions for generating all the objects described 
+We provide user-friendly functions for generating all the objects described 
 above. These functions have the same name as the class of the object to be 
 created. E.g. with ```fe_stand()``` you can generate an object of class 
 ```fe_stand``` from your own data. This will only be successful if the candidate
@@ -224,7 +224,7 @@ given inventory period).
 
 
 ### 2.2 Species Coding System {#spec_codes}
-Unfortunately, the different forest research institutions in Central Europa are
+Unfortunately, the different forest research institutions in Central Europe are
 typically using different tree species codings, which are typically not
 or only partly compatible with each other. This creates considerable friction
 e.g. in cross sectional analyses of data that come from different institutions.
@@ -294,18 +294,18 @@ Yield tables might be the most important tools forest science has ever provided
 to forest practice. They represent an invaluable wealth of empirical data that
 has been condensed into tabular descriptions of forest stand growth that are 
 easy to work with. For about three decades, however, they have been 
-increasingly frowned upon for several reason, including  their limited 
+increasingly frowned upon for several reasons, including  their limited 
 applicability to mixed species stands, their inherent restriction to even aged 
 stands only, and  their representation of forest growth under environmental 
 conditions that have since changed, and cannot be considered as stable as 
-they were when the data behind the tables were collected.Nevertheless, when 
+they were when the data behind the tables were collected. Nevertheless, when 
 handled wisely, yield tables can still be highly valuable assets in our tool 
 kit. Therefore, we developed a generic implementation of 
 yield tables in *ForestElementsR* that is designed to work equally well with 
 yield tables of different origin with different specifications and descriptive 
 variables. An initial collection of yield tables for important tree species in 
 Central Europe has already been implemented and comes readily with 
-*ForestElements*; this collection will certainly keep growing. Currently, it
+*ForestElementsR*; this collection will certainly keep growing. Currently, it
 covers the yield tables contained in @hilfstafeln_bavaria_1990. All readily 
 available tables are listed in the *ForestElementsR*'s documentation. You can 
 look them up with ```?yield_tables```. It is also possible and intended that 
@@ -314,7 +314,7 @@ even though they are not part of the collection that comes with the package. The
 key object here is ```fe_yield_table```, and the function ```fe_yield_table()```
 was designed for generating such objects in a user friendly way. See the 
 vignette [Yield Tables in ForestElementsR](yield_tables.html) for a detailed 
-description of *ForestElementR*'s yield table system.
+description of the yield table system of *ForestElementR*.
 
 The yield table system allows for an easy visualization of yield tables. We 
 demonstrate that by example of the widely known yield table for Norway spruce
@@ -329,7 +329,7 @@ fe_ytable_spruce_wiedemann_moderate_1936_42 |> plot()
 
 However, the visualization is not limited to the site index fan of a yield 
 table. Actually, any variable that is covered by a given yield table can be 
-visualized. See below how to obtain the names of all these variables:
+visualized. Below, see how to obtain the names of all these variables:
 
 ```{r}
 # Get all variables available in the yield table of interest
@@ -354,7 +354,7 @@ name ```pai_m3_ha_yr```).
 fe_ytable_spruce_wiedemann_moderate_1936_42 |> plot(variable = "pai_m3_ha_yr")
 ```
 
-Historical fact: As the diagram obove clearly shows, Wiedemann's yield tables 
+Historical fact: As the diagram above clearly shows, Wiedemann's yield tables 
 were not constructed by fitting functions to electronic data, but in a rather 
 visual and manual way to point clouds on millimeter paper. At the time, viable 
 alternatives were not available. Nevertheless, *ForestElementsR* keeps yield 
@@ -601,11 +601,11 @@ decades or more ago. See @pretzsch_forest_2014, and @pretzsch_forest_2023 for
 more information about forest growth trends in Central Europe. In general, 
 increment estimates that are not directly derived from repeated measurements 
 must *always* be interpreted with care and professional knowledge. Both methods 
-used in the code examples above, have their specific strengths and weaknesses. 
+used in the code examples above have their specific strengths and weaknesses. 
 Do not use them if you are not aware of these.
 
 We would like to draw your attention to another family of low level functions,
-which annable the evaluating of forest structure and diversity. In this field,
+which enable evaluations of forest structure and diversity. In this field,
 we see a huge potential for assessing ecosystem services beyond wood production
 and biodiversity based on standard forest mensuration data 
 (see @biber_fuzzy_2021, and @biber_forest_2020). Let us have a look at the
@@ -810,12 +810,12 @@ find this information in the specific documentation of the functions.
 
 
 ## 5 Expert Methods
-What we call expert methods are functions that are not intended to be used by
-standard users who want to directly work with forest data, but by developers.
-An important group of such functions are the constructors for the S3 classes
-(i.e. the [object families](#object_families)) we implemented, e.g. `fe_stand`,
-`fe_yield_table`, etc. Following standard practice, the names of these 
-constructors begin with "new_" followed by the name of the class, e.g. 
+What we call expert methods are functions that are typically useful for 
+developers. They are not relevant for standard users who want to work with 
+forest data. An important group of such functions are the constructors for the 
+S3 classes (i.e. the [object families](#object_families)) we implemented, e.g. 
+`fe_stand`, `fe_yield_table`, etc. Following standard practice, the names of 
+these constructors begin with "new_" followed by the name of the class, e.g. 
 `new_fe_stand`, or `new_fe_yield_table`. Only persons who are well aware of what
 they are doing should use these constructors, as they do not prevent users from
 creating ill-formed objects. Checking objects for adherence to the classes' 

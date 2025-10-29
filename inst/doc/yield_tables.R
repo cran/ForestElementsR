@@ -5,7 +5,7 @@ knitr::opts_chunk$set(
 )
 
 ## -----------------------------------------------------------------------------
-# Before we start, let's attach the package
+# Before we start, let us attach the package
 library(ForestElementsR)
 
 ## -----------------------------------------------------------------------------
@@ -130,8 +130,8 @@ si_abs <- ytable_lookup(age = 100, si = 1.2, variable = "h_q_m", ytable = ytab)
 si_abs
 si_abs |> round(digits = 1)
 
-# Let's to this again for the whole site index vector from above.
-# Reasonably, we obtain warnings, if we use site indexes beyond range of the 
+# Let us do this again for the whole site index vector from above.
+# Reasonably, we obtain warnings if we use site indexes beyond the range of the 
 # yield table
 si_abs_vec <- purrr::map_dbl(
   .x = si_vec,

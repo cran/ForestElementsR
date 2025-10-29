@@ -58,7 +58,7 @@ good results.*
 ## Installation
 
 In order to work with ForestElementsR you require an installation of R
-(version \>= 4.3.0) on your system. The installation files for R itself
+(version \>= 4.4.0) on your system. The installation files for R itself
 are available [here](https://cran.r-project.org/). The released version
 of ForestElementsR can be installed from CRAN with:
 
@@ -87,7 +87,7 @@ library(ForestElementsR)
 
     ## Lade nötiges Paket: sf
 
-    ## Linking to GEOS 3.12.2, GDAL 3.9.3, PROJ 9.4.1; sf_use_s2() is TRUE
+    ## Linking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE
 
 ``` r
 # Estimate the mean tree's merchantable wood volume over bark in m³ with the

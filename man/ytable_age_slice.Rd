@@ -37,9 +37,9 @@ and a warning is issued.
   # Get the yield table heights of the Wiedemann 1943 Scots pine table at age
   # 73
   ytable_age_slice(
-    fe_ytable_pine_wiedemann_moderate_1943,
     age = 73,
-    variable = "h_q_m"
+    variable = "h_q_m",
+    fe_ytable_pine_wiedemann_moderate_1943
   )
 
 
