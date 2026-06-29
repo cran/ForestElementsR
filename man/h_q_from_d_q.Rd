@@ -71,9 +71,9 @@ h_standard_gnfi3(species, dbh, d_qmean, h_qest)
 \insertAllCited{}
 }
 \seealso{
-Other stand heights: 
-\code{\link{h_100}()},
-\code{\link{h_dom_weise}()},
-\code{\link{h_q}()}
+Other stand heights:
+\code{\link[=h_100]{h_100()}},
+\code{\link[=h_dom_weise]{h_dom_weise()}},
+\code{\link[=h_q]{h_q()}}
 }
 \concept{stand heights}

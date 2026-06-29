@@ -1325,7 +1325,6 @@ if (window.hljs) {
 div.csl-bib-body { }
 div.csl-entry {
 clear: both;
-margin-bottom: 0em;
 }
 .hanging div.csl-entry {
 margin-left:2em;
@@ -1547,7 +1546,7 @@ specific species codings do not need to comprise all species provided in
 the species master table. In order to view this table, it is only
 necessary to type its name:</p>
 <pre class="r"><code>species_master_table
-#&gt; # A tibble: 96 × 6
+#&gt; # A tibble: 101 × 6
 #&gt;    genus species_no deciduous_conifer name_sci               name_eng   name_ger
 #&gt;    &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;             &lt;chr&gt;                  &lt;chr&gt;      &lt;chr&gt;   
 #&gt;  1 abies 001        conif             Abies alba             silver fir Tanne   
@@ -1560,7 +1559,7 @@ necessary to type its name:</p>
 #&gt;  8 abies 008        conif             Abies homolepis        Nikko fir  Nikko-T…
 #&gt;  9 abies 009        conif             Abies nordmanniana     Nordmann … Nordman…
 #&gt; 10 abies 010        conif             Abies procera          noble fir  Edeltan…
-#&gt; # ℹ 86 more rows
+#&gt; # ℹ 91 more rows
 
 # Also show the tail of the table
 species_master_table |&gt; tail(10)
@@ -1579,7 +1578,7 @@ species_master_table |&gt; tail(10)
 #&gt; 10 ulmus  003        decid             Ulmus laevis       European whi… Flatter…</code></pre>
 <p>In contrast to specific codings (see below) the species master table
 must contain single species only, i.e. each row represents a species,
-never a group of species. Currently, it comprises 96 tree species. Let
+never a group of species. Currently, it comprises 101 tree species. Let
 us have a look at the table’s anatomy:</p>
 <p>The key fields of the species master table are <em>genus</em> and
 <em>species_no</em>. Together, they must be unique. Both are of type
@@ -1608,14 +1607,14 @@ colloquial German names of all species.</p>
 are stored in the tibble <em>species_codings</em>:</p>
 <pre class="r"><code>species_codings
 #&gt; # A tibble: 6 × 2
-#&gt;   species_coding    code_table       
-#&gt;   &lt;chr&gt;             &lt;list&gt;           
-#&gt; 1 master            &lt;tibble [96 × 7]&gt;
-#&gt; 2 tum_wwk_short     &lt;tibble [96 × 7]&gt;
-#&gt; 3 tum_wwk_long      &lt;tibble [45 × 7]&gt;
-#&gt; 4 ger_nfi_2012      &lt;tibble [96 × 7]&gt;
-#&gt; 5 bavrn_state       &lt;tibble [96 × 7]&gt;
-#&gt; 6 bavrn_state_short &lt;tibble [96 × 7]&gt;</code></pre>
+#&gt;   species_coding    code_table        
+#&gt;   &lt;chr&gt;             &lt;named list&gt;      
+#&gt; 1 master            &lt;tibble [101 × 9]&gt;
+#&gt; 2 tum_wwk_short     &lt;tibble [101 × 9]&gt;
+#&gt; 3 tum_wwk_long      &lt;tibble [144 × 9]&gt;
+#&gt; 4 ger_nfi_2012      &lt;tibble [101 × 9]&gt;
+#&gt; 5 bavrn_state       &lt;tibble [137 × 9]&gt;
+#&gt; 6 bavrn_state_short &lt;tibble [101 × 9]&gt;</code></pre>
 <p>Each row in this tibble represents a specific coding; hereby the
 column <code>species_coding</code> provides the coding’s name, and the
 column <code>code_table</code> provides an own tibble that defines the
@@ -1633,7 +1632,7 @@ coding table, it could be accessed by usual indexing of the tibble
 <em>fe_species_get_coding_table</em> which needs to be called with the
 name of the desired coding:</p>
 <pre class="r"><code>fe_species_get_coding_table(&quot;tum_wwk_short&quot;)
-#&gt; # A tibble: 96 × 7
+#&gt; # A tibble: 101 × 9
 #&gt;    species_id genus      species_no deciduous_conifer name_sci name_eng name_ger
 #&gt;    &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;             &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;   
 #&gt;  1 1          picea      001        conif             Picea a… Norway … Fichte  
@@ -1646,7 +1645,8 @@ name of the desired coding:</p>
 #&gt;  8 7          pseudotsu… 001        conif             Pseudot… Douglas… Douglas…
 #&gt;  9 8          acer       001        decid             aliae d… other h… Sonstig…
 #&gt; 10 8          acer       002        decid             aliae d… other h… Sonstig…
-#&gt; # ℹ 86 more rows</code></pre>
+#&gt; # ℹ 91 more rows
+#&gt; # ℹ 2 more variables: level &lt;int&gt;, is_tree &lt;lgl&gt;</code></pre>
 <p>Clearly, this table closely resembles the species master table, as
 they have in common the columns <em>genus</em>, <em>species_no</em>,
 <em>deciduous_conifer</em>, <em>name_sci</em>, <em>name_eng</em>, and
@@ -1661,8 +1661,20 @@ and <em>species_no</em> which is not contained in the species master
 table. The species names, however, may differ from those in the master
 table in order to allow e.g. for regional colloquial naming preferences
 or, more importantly, for naming species groups which, by definition, do
-not exist in the master table. Let us have a view on the coding in
-compact form:</p>
+not exist in the master table.</p>
+<p>Besides <em>species_id</em>, every coding table carries two more
+columns, <em>level</em> and <em>is_tree</em>. The column <em>level</em>
+marks how fine or coarse a code is: <em>0</em> is the finest level (a
+single species, or a group that is not contained in any other group of
+the coding), and higher numbers denote ever coarser groups that nest the
+finer ones. For a “flat” coding that only distinguishes single species
+and non-overlapping groups, <em>level</em> is <em>0</em> throughout.
+Codings that additionally provide nesting group codes are called
+<em>hierarchical</em>; they are explained in <a href="#hierarchical_codings">Section 2.2.2</a>. The column
+<em>is_tree</em> is <em>TRUE</em> for all ordinary tree-species codes
+and <em>FALSE</em> for the rare codes that denote a non-tree category
+such as a shrub; see <a href="#non_tree_codes">Section 2.2.3</a>.</p>
+<p>Let us have a view on the coding in compact form:</p>
 <pre class="r"><code>fe_species_get_coding_table(&quot;tum_wwk_short&quot;) |&gt;
   select(species_id, name_eng) |&gt; # English names only for clarity
   distinct()
@@ -1687,8 +1699,12 @@ should use R to find this out unambiguously:</p>
   group_by(species_id, name_eng) |&gt;
   summarise(n_species = n()) |&gt;
   arrange(as.numeric(species_id)) # not required, but output is nicely sorted
-#&gt; `summarise()` has grouped output by &#39;species_id&#39;. You can override using the
-#&gt; `.groups` argument.
+#&gt; `summarise()` has regrouped the output.
+#&gt; ℹ Summaries were computed grouped by species_id and name_eng.
+#&gt; ℹ Output is grouped by species_id.
+#&gt; ℹ Use `summarise(.groups = &quot;drop_last&quot;)` to silence this message.
+#&gt; ℹ Use `summarise(.by = c(species_id, name_eng))` for per-operation grouping
+#&gt;   (`?dplyr::dplyr_by`) instead.
 #&gt; # A tibble: 10 × 3
 #&gt; # Groups:   species_id [10]
 #&gt;    species_id name_eng                        n_species
@@ -1700,9 +1716,9 @@ should use R to find this out unambiguously:</p>
 #&gt;  5 5          European beech                          1
 #&gt;  6 6          pedunculate/sessile oak (group)         2
 #&gt;  7 7          Douglas fir                             1
-#&gt;  8 8          other hardwood                         41
+#&gt;  8 8          other hardwood                         43
 #&gt;  9 9          soft deciduous wood                    10
-#&gt; 10 10         other conifers                         37</code></pre>
+#&gt; 10 10         other conifers                         40</code></pre>
 <p>Clearly, every species_id with n_species &gt; 1 actually represents a
 group of tree species. Let us look at the smallest group (species_id 6),
 which comprises only two species:</p>
@@ -1728,8 +1744,77 @@ table with the help of <em>genus</em> and <em>species_no</em>:</p>
 #&gt; 1 quercus 001        Quercus robur   pedunculate oak Stieleiche  
 #&gt; 2 quercus 002        Quercus petraea sessile oak     Traubeneiche</code></pre>
 </div>
+<div id="hierarchical_codings" class="section level4">
+<h4>2.2.2 Species groups and hierarchical codings</h4>
+<p>Almost every real-world coding distinguishes not only single species
+but also <em>species groups</em>. In the simplest case, a coding is a
+<em>partition</em>: each species belongs to exactly one code, and the
+codes never overlap. The <em>tum_wwk_short</em> coding used above is
+such a partition - the group codes 8, 9, and 10 are disjoint, and so are
+the single-species codes.</p>
+<p>Some codings, however, need a species to appear <strong>both</strong>
+as its own code <strong>and</strong> inside a coarser group of the
+<em>same</em> coding. The Bavarian state coding <em>bavrn_state</em>,
+for instance, codes the pedunculate oak singly as <em>54</em> and the
+sessile oak singly as <em>55</em>, but it also keeps the older group
+code <em>70</em> (“oak”) that comprises both. Such codings are called
+<em>hierarchical</em>. To keep casting between codings well defined, the
+codes of a coding must form a <em>laminar family</em>: the species sets
+of any two codes are either disjoint or fully nested - partial overlaps
+are forbidden. The column <em>level</em> records the nesting depth (0 =
+finest leaf, higher = coarser group).</p>
+<p>We can see this directly in the coding table of <em>bavrn_state</em>.
+The leaf codes 54 and 55 sit at level 0, while the group code 70 that
+contains them sits at level 1:</p>
+<pre class="r"><code>fe_species_get_coding_table(&quot;bavrn_state&quot;) |&gt;
+  filter(species_id %in% c(&quot;54&quot;, &quot;55&quot;, &quot;70&quot;)) |&gt;
+  select(species_id, genus, species_no, name_eng, level)
+#&gt; # A tibble: 6 × 5
+#&gt;   species_id genus   species_no name_eng        level
+#&gt;   &lt;chr&gt;      &lt;chr&gt;   &lt;chr&gt;      &lt;chr&gt;           &lt;int&gt;
+#&gt; 1 54         quercus 001        pedunculate oak     0
+#&gt; 2 55         quercus 002        sessile oak         0
+#&gt; 3 70         quercus 001        oak (group)         1
+#&gt; 4 70         quercus 002        oak (group)         1
+#&gt; 5 70         quercus 003        oak (group)         1
+#&gt; 6 70         quercus 006        oak (group)         1</code></pre>
+<p>When a species is <em>cast into</em> a hierarchical coding, it is
+always resolved to the <strong>finest</strong> code that represents it.
+The pedunculate oak (<em>quercus_001</em> in the master coding)
+therefore becomes the leaf code 54, not the group code 70:</p>
+<pre class="r"><code>as_fe_species_bavrn_state(fe_species_master(&quot;quercus_001&quot;)) |&gt; unclass()
+#&gt; [1] &quot;54&quot;</code></pre>
+</div>
+<div id="non_tree_codes" class="section level4">
+<h4>2.2.3 Non-tree codes</h4>
+<p>A few codings contain legal codes that do not stand for a tree
+species and that one cannot compute with - for example the
+<em>bavrn_state</em> code <em>99</em> (“Strauch”, shrub). Such codes are
+flagged with <em>is_tree = FALSE</em> in the coding table. Whether a
+code is a tree code is <em>derived</em> from its link to the species
+master table (a code that resolves to at least one master species is a
+tree code), so there is no separate flag that could fall out of
+sync.</p>
+<p>Two exported helpers report this information.
+<code>fe_species_non_tree_codes()</code> lists the non-tree codes of a
+coding, and <code>fe_species_is_tree()</code> tests, element by element,
+whether the codes of an <strong>fe_species</strong> vector denote tree
+species:</p>
+<pre class="r"><code>fe_species_non_tree_codes(&quot;bavrn_state&quot;)
+#&gt; [1] &quot;99&quot;
+
+spec_ids &lt;- fe_species_bavrn_state(c(&quot;10&quot;, &quot;60&quot;, &quot;99&quot;))
+fe_species_is_tree(spec_ids)
+#&gt; [1]  TRUE  TRUE FALSE</code></pre>
+<p>Constructing a species vector that contains a non-tree code is
+allowed (the code is part of the coding), but objects that are meant to
+hold computable trees - such as <code>fe_stand()</code> and its
+relatives - reject them with a clear error. When a non-tree code is
+<em>cast</em> into another coding, it resolves to <code>NA</code> (with
+a message), because it has no tree-species equivalent.</p>
+</div>
 <div id="implemented_codings" class="section level4">
-<h4>2.1.2 Implemented codings</h4>
+<h4>2.2.4 Implemented codings</h4>
 <p>Six species codings are currently implemented. While their
 documentation is available in the package, and can be accessed with
 <code>?species_codings</code>, I list them also here:</p>
@@ -1748,13 +1833,16 @@ species are attributed to a few large container groups.</p></li>
 <li><p><strong>tum_wwk_long:</strong> This is one of two codings in use
 at the Chair of Forest Growth and Yield Science at the Technical
 University of Munich. It defines a larger set of single species than the
-<em>tum_wwk_short</em> coding. In its original version, this coding
-contains several species groups, but most of these groups are ambiguous
-as they include species for which also a single code is provided. These
-ambiguous groups were not included in this package.</p></li>
+<em>tum_wwk_short</em> coding. This coding is <em>hierarchical</em> (see
+<a href="#hierarchical_codings">Section 2.2.2</a>): besides the
+single-species (leaf) codes it also provides the coarser species-group
+codes that contain them, and it covers every species of the master
+table.</p></li>
 <li><p><strong>bavrn_state:</strong> This species coding is the coding
-used by the Bavarian State Forest Service.</p></li>
-<li><p><strong>bavrn_state_short:</strong> This coding that combines the
+used by the Bavarian State Forest Service. It is <em>hierarchical</em>
+(e.g. the single oak codes 54 and 55 nest in the group code 70), and it
+contains one non-tree code (99, “Strauch”/shrub; see <a href="#non_tree_codes">Section 2.2.3</a>).</p></li>
+<li><p><strong>bavrn_state_short:</strong> This coding combines the
 species of <em>bavrn_state</em> into larger groups. These groups are
 typically used by the Bavarian State Forest Service in aggregated
 evaluations.</p></li>
@@ -1762,6 +1850,43 @@ evaluations.</p></li>
 the species coding used by the German National Forest Inventory of 2012
 <span class="citation">(Riedel et al. 2017)</span>.</p></li>
 </ul>
+</div>
+<div id="field_table" class="section level4">
+<h4>2.2.5 A field-ready coding table</h4>
+<p>The full coding table returned by
+<code>fe_species_get_coding_table()</code> carries <em>one row per
+elementary species</em>. For a hierarchical coding this means a species
+can occur several times (once as a leaf code and once in each group that
+contains it), and a group code spreads over as many rows as it has
+member species. That is exactly what the casting machinery needs, but it
+is awkward as a printed lookup key for field work.</p>
+<p>For that purpose there is <code>fe_species_get_field_table()</code>.
+It returns the <em>code-level</em> view: <strong>each code exactly
+once</strong>, together with the name of the species or group it stands
+for. The names are taken from the coding itself (not from the master
+table), so group names appear as such, and all three name columns are
+always included regardless of the <code>fe_spec_lang</code> option. The
+rows are in the coding’s canonical order (leaf codes first, then the
+coarser groups), and the <em>level</em> and <em>is_tree</em> columns are
+kept, as both matter in the field:</p>
+<pre class="r"><code>fe_species_get_field_table(&quot;tum_wwk_short&quot;)
+#&gt; # A tibble: 10 × 6
+#&gt;    species_id name_sci                   name_eng         name_ger level is_tree
+#&gt;    &lt;chr&gt;      &lt;chr&gt;                      &lt;chr&gt;            &lt;chr&gt;    &lt;int&gt; &lt;lgl&gt;  
+#&gt;  1 1          Picea abies                Norway spruce    Fichte       0 TRUE   
+#&gt;  2 2          Abies alba                 silver fir       Tanne        0 TRUE   
+#&gt;  3 3          Pinus sylvestris           Scots pine       Kiefer       0 TRUE   
+#&gt;  4 4          Larix decidua              European larch   Europäi…     0 TRUE   
+#&gt;  5 5          Fagus sylvatica            European beech   Buche        0 TRUE   
+#&gt;  6 6          Quercus robur/petraea      pedunculate/ses… Eiche (…     0 TRUE   
+#&gt;  7 7          Pseudotsuga menziesii      Douglas fir      Douglas…     0 TRUE   
+#&gt;  8 8          aliae deciduae             other hardwood   Sonstig…     0 TRUE   
+#&gt;  9 9          aliae deciduae molli ligno soft deciduous … Weichla…     0 TRUE   
+#&gt; 10 10         alia conifera              other conifers   Sonstig…     0 TRUE</code></pre>
+<p>Rendering such a table into a nicely formatted, printable document
+(e.g. a PDF) is deliberately left to the downstream packages that
+already carry a document-rendering toolchain; <em>ForestElementsR</em>
+itself only provides the data.</p>
 </div>
 </div>
 </div>
@@ -1800,9 +1925,11 @@ spec_ids_2
 <p>If the input vector contains codes which are not supported by the
 chosen coding, the attempt terminates with an error:</p>
 <pre class="r"><code>fe_species_tum_wwk_short(c(1, 321, 1, 9999))
-#&gt; Error: Code(s) 321, 9999 is/are not supported by species coding &#39;tum_wwk_short&#39;
+#&gt; Error:
+#&gt; ! Code(s) 321, 9999 is/are not supported by species coding &#39;tum_wwk_short&#39;
 fe_species_ger_nfi_2012(c(&quot;100&quot;, &quot;290&quot;, &quot;Peter&quot;, &quot;Paul&quot;, &quot;Mary&quot;))
-#&gt; Error: Code(s) Peter, Paul, Mary is/are not supported by species coding &#39;ger_nfi_2012&#39;</code></pre>
+#&gt; Error:
+#&gt; ! Code(s) Peter, Paul, Mary is/are not supported by species coding &#39;ger_nfi_2012&#39;</code></pre>
 <p>For each implemented coding there exists a function
 <em>is_fe_species_coding_name</em> for checking whether an object is a
 vector of species codes of the requested class:</p>
@@ -1906,7 +2033,8 @@ such species names are not the codes themselves. This means, you cannot
 generate a species code vector from a vector of species names:</p>
 <pre class="r"><code>spec_names &lt;- c(&quot;Abies alba&quot;, &quot;Picea abies&quot;)
 fe_species_ger_nfi_2012(spec_names)
-#&gt; Error: Code(s) Abies alba, Picea abies is/are not supported by species coding &#39;ger_nfi_2012&#39;</code></pre>
+#&gt; Error:
+#&gt; ! Code(s) Abies alba, Picea abies is/are not supported by species coding &#39;ger_nfi_2012&#39;</code></pre>
 <p>When assigning new values to elements of a species coding vector, the
 safest way to do so is to provide the new values as an instance of the
 same class. But with all other values, an attempt will be made to
@@ -1931,9 +2059,8 @@ spec_vec[3:4] &lt;- c(&quot;40&quot;, &quot;70&quot;)
 is_fe_species_bavrn_state(spec_vec)
 #&gt; [1] TRUE
 format(spec_vec, &quot;eng&quot;)
-#&gt; [1] &quot;Norway spruce&quot;                   &quot;Norway spruce&quot;                  
-#&gt; [3] &quot;European larch&quot;                  &quot;pedunculate/sessile oak (group)&quot;
-#&gt; [5] &quot;Douglas fir&quot;                     &quot;Douglas fir&quot;
+#&gt; [1] &quot;Norway spruce&quot;  &quot;Norway spruce&quot;  &quot;European larch&quot; &quot;oak (group)&quot;   
+#&gt; [5] &quot;Douglas fir&quot;    &quot;Douglas fir&quot;
 
 # Numerical vector is converted
 spec_vec[3:4] &lt;- c(60, 87)
@@ -1945,7 +2072,8 @@ format(spec_vec, &quot;eng&quot;)
 
 # Species code not supported by goal coding - no assignment and error
 spec_vec[1:2] &lt;- c(&quot;3333&quot;, &quot;12&quot;)
-#&gt; Error: Code(s) 3333 is/are not supported by species coding &#39;bavrn_state&#39;
+#&gt; Error:
+#&gt; ! Code(s) 3333 is/are not supported by species coding &#39;bavrn_state&#39;
 is_fe_species_bavrn_state(spec_vec)
 #&gt; [1] TRUE
 format(spec_vec, &quot;eng&quot;)
@@ -1963,7 +2091,7 @@ format(spec_vec, &quot;eng&quot;) # ... which is Scots pine in the goal coding
 #&gt; [1] &quot;Norway spruce&quot;  &quot;Norway spruce&quot;  &quot;European beech&quot; &quot;noble hardwood&quot;
 #&gt; [5] &quot;Scots pine&quot;     &quot;Scots pine&quot;</code></pre>
 </div>
-<div id="species-code-conversions" class="section level3">
+<div id="species_code_conversions" class="section level3">
 <h3>3.3 Species code conversions</h3>
 <p>For each implemented species coding there is a function
 <em>as_fe_species_coding_name</em> which tries to convert an object of
@@ -1978,17 +2106,31 @@ as_fe_species_ger_nfi_2012(spec_ids) |&gt; format(&quot;eng&quot;)
 <p>When the initial species code vector contains codes which belong to
 the same species group in the goal coding, information is lost when
 doing the conversion. This is a <em>backward ambiguous cast</em>. In
-such a case, the conversion is executed, but a warning is issued.</p>
+such a case, the conversion is executed, but a <em>message</em> is
+issued. (In earlier versions of the package this was a <em>warning</em>;
+it was downgraded to a message because such information loss is the
+normal, intended outcome of aggregating into coarser groups, and a
+warning forced users to wrap every deliberate aggregation in
+<code>suppressWarnings()</code>.)</p>
 <pre class="r"><code>spec_ids_1 &lt;- as_fe_species_ger_nfi_2012(c(&quot;170&quot;, &quot;150&quot;, &quot;140&quot;))
 spec_ids_1 |&gt; format(&quot;eng&quot;)
 #&gt; [1] &quot;elm (spec.)&quot;    &quot;lime (spec.)&quot;   &quot;sycamore maple&quot;
 
 # Backward ambiguous cast (possibly, but with information loss)
 spec_ids_2 &lt;- as_fe_species_tum_wwk_short(spec_ids_1)
-#&gt; Warning: Cast loses information. Goal code(s) 8 correspond to 3 original
-#&gt; code(s).
+#&gt; Cast loses information. Goal code(s) 8 correspond to 3 original code(s).
 spec_ids_2 |&gt; format(&quot;eng&quot;)
 #&gt; [1] &quot;other hardwood&quot; &quot;other hardwood&quot; &quot;other hardwood&quot;</code></pre>
+<p>Conversely, when casting <em>into</em> a hierarchical coding (one
+that offers both single-species and group codes, see <a href="#hierarchical_codings">Section 2.2.2</a>), each species is
+resolved to the <em>finest</em> code available for it - the
+single-species code if there is one, the smallest containing group
+otherwise. This happens automatically and without information loss:</p>
+<pre class="r"><code># Pedunculate and sessile oak resolve to the single codes 54 and 55,
+# not to the group code 70
+as_fe_species_bavrn_state(fe_species_master(c(&quot;quercus_001&quot;, &quot;quercus_002&quot;))) |&gt;
+  format(&quot;code&quot;)
+#&gt; [1] &quot;54&quot; &quot;55&quot;</code></pre>
 <p>Conversions with no match in the goal coding terminate with an
 error:</p>
 <pre class="r"><code>spec_ids &lt;- as_fe_species_bavrn_state(c(&quot;11&quot;, &quot;11&quot;, &quot;11&quot;))
@@ -1997,7 +2139,9 @@ spec_ids |&gt; format(&quot;eng&quot;)
 
 # No Serbian spruce in the tum_wwk_long coding
 spec_ids |&gt; as_fe_species_tum_wwk_long()
-#&gt; Error: Original code(s) 11 has/have no (complete) match in goal species coding.</code></pre>
+#&gt; &lt;fe_species_tum_wwk_long[3]&gt;
+#&gt; Error in `match.arg()`:
+#&gt; ! &#39;arg&#39; muss NULL oder ein Zeichenkettenvektor sein</code></pre>
 <p><em>Forward ambiguous casts</em> occur when one code in the initial
 code vector has several matches in the goal coding. If this is the case,
 execution terminates, and an error is thrown:</p>
@@ -2008,11 +2152,40 @@ spec_ids |&gt; format(&quot;eng&quot;)
 
 # Conversion attempt terminates with error
 spec_ids |&gt; as_fe_species_ger_nfi_2012()
-#&gt; Error: Ambiguous cast attempt. Original code(s) 10, 8, 9 correspond(s) to 12, 23, 9 goal code(s).
+#&gt; Error:
+#&gt; ! Ambiguous cast attempt. Original code(s) 10, 8, 9 correspond(s) to 12, 23, 9 goal code(s).
 
 # Similar
 as_fe_species_master(fe_species_ger_nfi_2012(&quot;90&quot;))
-#&gt; Error: Ambiguous cast attempt. Original code(s) 90 correspond(s) to 8 goal code(s).</code></pre>
+#&gt; Error:
+#&gt; ! Ambiguous cast attempt. Original code(s) 90 correspond(s) to 10 goal code(s).</code></pre>
+<p>There is one controlled exception to the forward-ambiguous error. A
+few source group codes genuinely straddle two groups of a goal coding,
+so there is no single matching target node, yet a sensible aggregate
+exists. For these cases the package ships a small, documented table,
+<code>species_cast_overrides</code>, that declares the deliberate target
+code. When such an override applies, the cast is carried out (lossily,
+with a message) instead of raising an error:</p>
+<pre class="r"><code>species_cast_overrides
+#&gt; # A tibble: 3 × 4
+#&gt;   coding_from  coding_to     species_id_from species_id_to
+#&gt;   &lt;chr&gt;        &lt;chr&gt;         &lt;chr&gt;           &lt;chr&gt;        
+#&gt; 1 ger_nfi_2012 tum_wwk_short 290             8            
+#&gt; 2 bavrn_state  tum_wwk_short 70              6            
+#&gt; 3 bavrn_state  tum_wwk_short 80              8
+
+# ger_nfi_2012 code 290 has no single match in tum_wwk_short, but the
+# override resolves it to code 8
+as_fe_species_tum_wwk_short(fe_species_ger_nfi_2012(&quot;290&quot;)) |&gt; format(&quot;code&quot;)
+#&gt; Applied cast override(s) ger_nfi_2012 -&gt; tum_wwk_short: 290 -&gt; 8
+#&gt; [1] &quot;8&quot;</code></pre>
+<p>Finally, a <em>non-tree</em> code (see <a href="#non_tree_codes">Section 2.2.3</a>) has no tree-species equivalent
+in any goal coding, so it is resolved to <code>NA</code> (again with a
+message) rather than treated as a failed match:</p>
+<pre class="r"><code>as_fe_species_tum_wwk_short(fe_species_bavrn_state(c(&quot;10&quot;, &quot;99&quot;))) |&gt;
+  unclass()
+#&gt; Non-tree code(s) 99 have no equivalent in coding &#39;tum_wwk_short&#39; and become NA.
+#&gt; [1] &quot;1&quot; NA</code></pre>
 <p>Note that the operability of a species coding cast is checked for
 each single conversion attempt, because it does depend on the single
 species codes to be converted. I.e. some conversions between the same
@@ -2032,7 +2205,8 @@ spec_ids_1 |&gt; format(&quot;eng&quot;)
 #&gt; [1] &quot;other hardwood&quot;      &quot;soft deciduous wood&quot; &quot;other conifers&quot;
 
 spec_ids_2 &lt;- as_fe_species_ger_nfi_2012(spec_ids_1)
-#&gt; Error: Ambiguous cast attempt. Original code(s) 10, 8, 9 correspond(s) to 12, 23, 9 goal code(s).</code></pre>
+#&gt; Error:
+#&gt; ! Ambiguous cast attempt. Original code(s) 10, 8, 9 correspond(s) to 12, 23, 9 goal code(s).</code></pre>
 <p>In some cases one might want to extract the character vector of
 species codes out of an <em>fe_species_coding_name</em> vector. This is
 possible either with <em>unclass</em> or with <em>vctrs::vec_data</em>
@@ -2095,13 +2269,13 @@ only the first ten lines are shown, we see only the species code “1”.
 For finding out if there are more species, we could use the function
 <em>summary</em>:</p>
 <pre class="r"><code>dat |&gt; summary()
-#&gt;    tree_id          species_id    time_yr         dbh_cm         height_m    
-#&gt;  Length:283         1:130      Min.   :2022   Min.   : 7.00   Min.   : 7.20  
-#&gt;  Class :character   2: 98      1st Qu.:2022   1st Qu.: 9.90   1st Qu.:11.65  
-#&gt;  Mode  :character   5: 42      Median :2022   Median :17.50   Median :19.40  
-#&gt;                     8: 13      Mean   :2022   Mean   :21.01   Mean   :19.83  
-#&gt;                                3rd Qu.:2022   3rd Qu.:28.05   3rd Qu.:26.95  
-#&gt;                                Max.   :2022   Max.   :73.40   Max.   :39.30</code></pre>
+#&gt;       tree_id    species_id    time_yr         dbh_cm         height_m    
+#&gt;  Length   :283   1:130      Min.   :2022   Min.   : 7.00   Min.   : 7.20  
+#&gt;  N.unique :283   2: 98      1st Qu.:2022   1st Qu.: 9.90   1st Qu.:11.65  
+#&gt;  N.blank  :  0   5: 42      Median :2022   Median :17.50   Median :19.40  
+#&gt;  Min.nchar:  1   8: 13      Mean   :2022   Mean   :21.01   Mean   :19.83  
+#&gt;  Max.nchar:  3              3rd Qu.:2022   3rd Qu.:28.05   3rd Qu.:26.95  
+#&gt;                             Max.   :2022   Max.   :73.40   Max.   :39.30</code></pre>
 <p>Very similar to a summary for a <em>factor</em>, the summary for the
 column <em>species_id</em> provides the row counts for each of the four
 coded species. In order to display species names instead of the codes,
@@ -2130,13 +2304,13 @@ dat
 
 # Display a summary of dat
 dat |&gt; summary()
-#&gt;    tree_id                   species_id     time_yr         dbh_cm     
-#&gt;  Length:283         European beech: 42   Min.   :2022   Min.   : 7.00  
-#&gt;  Class :character   Norway spruce :130   1st Qu.:2022   1st Qu.: 9.90  
-#&gt;  Mode  :character   other hardwood: 13   Median :2022   Median :17.50  
-#&gt;                     silver fir    : 98   Mean   :2022   Mean   :21.01  
-#&gt;                                          3rd Qu.:2022   3rd Qu.:28.05  
-#&gt;                                          Max.   :2022   Max.   :73.40  
+#&gt;       tree_id             species_id     time_yr         dbh_cm     
+#&gt;  Length   :283   European beech: 42   Min.   :2022   Min.   : 7.00  
+#&gt;  N.unique :283   Norway spruce :130   1st Qu.:2022   1st Qu.: 9.90  
+#&gt;  N.blank  :  0   other hardwood: 13   Median :2022   Median :17.50  
+#&gt;  Min.nchar:  1   silver fir    : 98   Mean   :2022   Mean   :21.01  
+#&gt;  Max.nchar:  3                        3rd Qu.:2022   3rd Qu.:28.05  
+#&gt;                                       Max.   :2022   Max.   :73.40  
 #&gt;     height_m    
 #&gt;  Min.   : 7.20  
 #&gt;  1st Qu.:11.65  
@@ -2165,13 +2339,13 @@ dat &lt;- dat |&gt;
 # Note that the summary of species_id does not preserve the original order of
 # the codes (species are alphabetically sorted, dependent on language setting)
 dat |&gt; summary()
-#&gt;    tree_id                   species_id     time_yr         dbh_cm     
-#&gt;  Length:283         European beech: 42   Min.   :2022   Min.   : 7.00  
-#&gt;  Class :character   Norway spruce :130   1st Qu.:2022   1st Qu.: 9.90  
-#&gt;  Mode  :character   other hardwood: 13   Median :2022   Median :17.50  
-#&gt;                     silver fir    : 98   Mean   :2022   Mean   :21.01  
-#&gt;                                          3rd Qu.:2022   3rd Qu.:28.05  
-#&gt;                                          Max.   :2022   Max.   :73.40  
+#&gt;       tree_id             species_id     time_yr         dbh_cm     
+#&gt;  Length   :283   European beech: 42   Min.   :2022   Min.   : 7.00  
+#&gt;  N.unique :283   Norway spruce :130   1st Qu.:2022   1st Qu.: 9.90  
+#&gt;  N.blank  :  0   other hardwood: 13   Median :2022   Median :17.50  
+#&gt;  Min.nchar:  1   silver fir    : 98   Mean   :2022   Mean   :21.01  
+#&gt;  Max.nchar:  3                        3rd Qu.:2022   3rd Qu.:28.05  
+#&gt;                                       Max.   :2022   Max.   :73.40  
 #&gt;     height_m         v_cbm        
 #&gt;  Min.   : 7.20   Min.   :0.00996  
 #&gt;  1st Qu.:11.65   1st Qu.:0.03441  
@@ -2220,35 +2394,36 @@ dat |&gt;
   scale_x_log10() +
   scale_y_log10()</code></pre>
 <div class="figure" style="text-align: center">
-<img role="img" aria-label="Stem volume over diameter by species in log-log display" src="data:image/png;base64,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" alt="Stem volume over diameter by species in log-log display" width="470.4" />
+<img role="img" aria-label="Stem volume over diameter by species in log-log display" src="data:image/png;base64,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" alt="Stem volume over diameter by species in log-log display" width="470.4" />
 <p class="caption">
 Stem volume over diameter by species in log-log display
 </p>
 </div>
 </div>
 </div>
-<div id="informations-for-developers" class="section level2">
-<h2>4. Informations for developers</h2>
-<p>Most prominently, in the context of species codes a developer of the
-package <em>ForestElementsR</em> will want to add a new species coding.
-A few things have to be done in order to make that work. We mention
-these work steps first, and detail on them below:</p>
-<ul>
-<li>If the coding contains new species, add them to the species master
-table</li>
-<li>Add new species to the <em>fe_species_master</em> coding</li>
-<li>Add the new coding to the <em>species_coding</em> tibble</li>
-<li>Copy the R-source file of an existing coding and adapt it
-(easy!)</li>
-<li>Add a species coding cast function to your new coding to the
-R-source file of each other coding (easy!)</li>
-<li>Document the new coding (easy!)</li>
-<li>Add your new coding to the automated tests for species codings (not
-difficult)</li>
-<li><strong>Never</strong> touch the source file
-<em>fe_species_helper_functions.R</em> if you do not <em>exactly</em>
-know what you are doing.</li>
-</ul>
+<div id="information-for-developers" class="section level2">
+<h2>4. Information for developers</h2>
+<p>There are two rather different developer tasks around species
+codings, and it helps to keep them apart:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Maintaining the <em>data</em> of the codings</strong> -
+adding a species to the master table, adding a code to an existing
+coding, fixing a name, or building a “short” aggregation coding. This is
+now entirely <em>CSV-driven</em>: a set of exported builder functions
+turns editable CSV files into the validated package data, steered by two
+workbench scripts in <code>data-raw/</code>. You edit CSV, you do not
+edit R code. <a href="#dev_data">Section 4.1</a> describes the layout,
+and <a href="#dev_update">Section 4.2</a> is a step-by-step
+recipe.</p></li>
+<li><p><strong>Adding a genuinely <em>new</em> coding</strong> - this
+additionally needs a new S3 (vctrs) class and the cast functions that
+connect it to all the other codings. That part still lives in R source
+files and is described in <a href="#dev_new_coding">Section
+4.3</a>.</p></li>
+</ol>
+<p>Finally, <a href="#dev_never">Section 4.4</a> repeats the standing
+warning never to touch <code>fe_species_helper_functions.R</code>
+without knowing <em>exactly</em> what you are doing.</p>
 <p>Before we get into the details, note that all species codings inherit
 from the <em>vctrs_vctr</em> class, which is provided by the package <a href="https://vctrs.r-lib.org/index.html"><em>vctrs</em></a>:</p>
 <pre class="r"><code>fe_species_bavrn_state(&quot;30&quot;) |&gt; class()
@@ -2265,68 +2440,126 @@ fe_species_master(&quot;abies_004&quot;) |&gt; class()
 subclasses, which would be an obvious feature for a system of species
 codings, it has a very convenient way of supporting casts between
 different classes. As this is a key requirement of our implementation,
-we decided to design a <em>vctrs</em> based solution. But now, let’s
-talk about the above-mentioned steps in somewhat more detail.</p>
-<div id="check-for-new-species-and-add-them-to-the-species-master-table" class="section level3">
-<h3>4.1 Check for new species and add them to the species master
-table</h3>
-<p>If you plan to implement a new species coding, carefully check the <a href="#species_master_table">species master table</a> if there is any
-species in your coding which is not covered which is not listed in the
-master table, yet. If it is not, you can add it as a new row. Probably,
-the <em>genus</em> where your new species belongs to is already present.
-In this case simply give your entry the desired <em>genus</em> name
-(always lowercase!) and use for the <em>species_no</em> entry the
-greatest existing species number plus one (always three digit character
-string with leading zeroes). Fill the other field of the row with the
-correct species names and the <em>deciduous_conifer</em> information. In
-case, the required <em>genus</em> is not yet covered, introduce it to
-the table and give your entry the <em>species_no</em> ‘001’. Note that
-NA values are not allowed at all in the species master table.</p>
-<p>However, you must by any means avoid to have the same species twice
-in the species master table. Maybe, the species is listed, but under a
-different name than that you are used to. In this case, remember, you
-can choose different names in your specific coding table, as long as the
-link to the correct entry in the species master table by <em>genus</em>
-and <em>species_no</em> is existing. If you feel a scientific name in
-the species master table is outdated or that colloquial names could be
-better chosen, please contact the maintainers of
-<em>ForestElementsR</em> before making any changes.</p>
+we decided to design a <em>vctrs</em> based solution.</p>
+<div id="dev_data" class="section level3">
+<h3>4.1 The data behind the codings</h3>
+<p>All coding data is generated from editable CSV files by exported
+builder functions; the package data objects
+(<code>species_master_table</code>, <code>species_codings</code>,
+<code>species_cast_overrides</code>) are the <em>output</em>, never
+edited directly.</p>
+<ul>
+<li><p><strong>The master table</strong> lives in
+<code>data-raw/species_master_table.csv</code> (exactly six columns:
+<em>genus</em>, <em>species_no</em>, <em>deciduous_conifer</em>,
+<em>name_sci</em>, <em>name_eng</em>, <em>name_ger</em>; one row per
+single species). <code>master_template_csv()</code> writes a fresh
+snapshot, and <code>master_table_from_csv()</code> reads it back with
+strict validation (unique keys, lower-case genus, three-digit
+<em>species_no</em>, no NAs).</p></li>
+<li><p><strong>Each coding</strong> has its own CSV in
+<code>data-raw/codings/&lt;coding&gt;.csv</code>, in the
+<em>species-indexed + <code>parent_code</code></em> format. There is one
+row per master species, plus extra declaration rows for group names. The
+key columns are:</p>
+<ul>
+<li><em>species_id</em> - the code assigned to that species. Leaving it
+empty means “this species is not covered by the coding”. Several species
+sharing one <em>species_id</em> form a group.</li>
+<li><em>parent_code</em> - the <em>species_id</em> of the coarser group
+that contains this code. This is what makes a coding
+<em>hierarchical</em>; a flat coding leaves <em>parent_code</em> empty
+throughout. The builder derives the <em>level</em> column from the
+<code>parent_code</code> chains.</li>
+<li><em>name_sci</em>, <em>name_eng</em>, <em>name_ger</em> - optional
+for a single-species code (then inherited from the master), but required
+for a group code (which has no master row).</li>
+<li><em>master_name_*</em> and, for “short” codings, <em>agg_from_*</em>
+are read-only reference columns to help while editing; the builder
+ignores them. Note there is <strong>no</strong> <em>is_tree</em> column
+to maintain: whether a code is a tree code is <em>derived</em> from its
+master link (a code with no master link, e.g. a “shrub” category,
+becomes a non-tree code automatically, with a message).</li>
+</ul></li>
+<li><p><code>coding_template_from_master()</code> produces such a CSV
+(blank, or prefilled from an existing coding), and
+<code>coding_table_from_template()</code> turns the edited CSV into a
+validated coding table. It checks the <em>laminarity</em> invariant
+(codes are nested or disjoint, never partially overlapping), derives
+<em>level</em> and <em>is_tree</em>, and stores the rows in canonical
+order. For a “short” aggregation coding it additionally verifies,
+against the freshly built parent coding, that the coding is a valid
+coarsening (every parent group maps to exactly one short code). The
+parent/child pairs (<code>bavrn_state_short</code> ←
+<code>bavrn_state</code>, <code>tum_wwk_short</code> ←
+<code>tum_wwk_long</code>) are registered internally.</p></li>
+<li><p><strong>Cast overrides</strong> are their own little CSV
+(<code>data-raw/codings/cast_overrides.csv</code>), built and validated
+by <code>cast_overrides_from_csv()</code> into the package object
+<code>species_cast_overrides</code> (see <a href="#species_code_conversions">Section 3.3</a>).</p></li>
+</ul>
 </div>
-<div id="add-new-species-to-the-coding-fe_species_master" class="section level3">
-<h3>4.2 Add new species to the coding fe_species_master</h3>
-<p>By definition, the coding <a href="#implemented_codings"><em>fe_species_master</em></a> is the coding
-that mirrors the contents of the species master table. So, if you have
-added a new species to the master table, you must also add it to the
-coding. Inside the tibble <em>species_codings</em>, access the
-<em>code_table</em> for the <em>species_coding</em> <em>master</em> and
-add the species. See <a href="#species_specific_codings">here</a> for an
-explanation of the tibble <em>species_codings</em> and its
-substructures.</p>
+<div id="dev_update" class="section level3">
+<h3>4.2 How to update the master table or an existing coding</h3>
+<p>These are the day-to-day data tasks, both driven by a workbench
+script in <code>data-raw/</code> that is meant to be run
+<strong>manually, block by block</strong> (not <code>source()</code>d in
+one go - the first block can overwrite a CSV).</p>
+<p><strong>To add or change a species in the master table</strong>
+(<code>data-raw/species_master_table.R</code>):</p>
+<ol style="list-style-type: decimal">
+<li>(Optional) run the snapshot step to refresh
+<code>data-raw/species_master_table.csv</code> from the installed
+table.</li>
+<li>Edit the CSV: add or change rows (six columns, one row per species).
+A new species in an existing genus gets the next free
+<em>species_no</em>; a new genus starts at <em>001</em>.</li>
+<li>Run <code>master_table_from_csv()</code>, inspect, then
+<code>usethis::use_data()</code> and reinstall the package so the coding
+builder sees the new master.</li>
+</ol>
+<p><strong>To add a code to a coding, fix a name, or build a short
+coding</strong> (<code>data-raw/species_codings.R</code>):</p>
+<ol style="list-style-type: decimal">
+<li>In the config block, set <code>coding_name</code> and
+<code>mode</code> (<code>&quot;new&quot;</code> starts a blank CSV from the
+master; <code>&quot;edit&quot;</code> prefills from the installed coding). The
+parent coding, if any, is resolved automatically.</li>
+<li>Run the generate block to (re)write
+<code>data-raw/codings/&lt;coding&gt;.csv</code>.</li>
+<li>Edit the CSV by hand following the rules in <a href="#dev_data">Section 4.1</a>. For a short coding, use the
+<em>agg_from_*</em> hint columns to keep all species of one parent group
+on the same code.</li>
+<li>Run the build-and-validate block. It builds the coding from the CSV
+and reports its codes and any non-tree codes; an invalid laminarity or
+coarsening fails here with a clear message.</li>
+<li>Run the full-rebuild block to regenerate the whole
+<code>species_codings</code> object (parents before children), then
+<code>usethis::use_data()</code> and reinstall. If the change affects a
+cast override, rerun <code>data-raw/cast_overrides.R</code> as
+well.</li>
+<li>Run the tests with <code>devtools::test()</code> and a full
+<code>R CMD check</code>. Note that the <code>data-raw</code> CSVs are
+excluded from the built package (<code>.Rbuildignore</code>), so the
+test suite is deliberately written to work <em>without</em> them - run
+the real check, not just <code>test_dir()</code> against a loaded
+session.</li>
+</ol>
 </div>
-<div id="add-the-new-species-coding-to-the-tibble-species_codings" class="section level3">
-<h3>4.3 Add the new species coding to the tibble
-<em>species_codings</em></h3>
-<p>First, give your new coding a name which is short, but informative
-enough. See our examples <a href="#implemented_%20_codings">here</a>.
-Add a new row to the tibble <a href="#species_specific_codings"><em>species_codings</em></a> and insert
-the name you chose in the field <em>species_coding</em>. In the second
-field (<em>code_table</em>) insert a tibble with exactly the structure
-as explained in <a href="#species_specific_codings">Section 2.2</a>. In
-the column <em>species_id</em> you must provide your own codes (always
-character, even if they are numbers only). The link to the <a href="#species_master_table">species master table</a> must be guaranteed
-with the entries in <em>genus</em> and <em>species_no</em>. All your
-species must be listed in the master table, but your coding is not
-required to cover all species of the master table. The species names in
-your code table may differ from those in the master table; when <a href="#display_options">displaying names</a>, those of your code table
-are used. Note that no NAs at all are allowed in your code table.</p>
-<p>If you give the same <em>species_id</em> to several species in the
-code table, these species will be treated as a group. As species name in
-the code table, you must then use the same group name for all these
-species. Look into the existing codings for examples, e.g. the
-species_ids 8, 9, and 10 in the coding <em>tum_wwk_short</em>.</p>
-</div>
-<div id="adapt-source-file" class="section level3">
-<h3>4.4 Copy the R-source file of an existing coding and adapt it</h3>
+<div id="dev_new_coding" class="section level3">
+<h3>4.3 Adding a brand-new coding</h3>
+<p>A genuinely new coding needs two things. Its <em>data</em> is built
+exactly as in <a href="#dev_data">Sections 4.1</a> and <a href="#dev_update">4.2</a>: add a new
+<code>data-raw/codings/&lt;coding&gt;.csv</code>, register the coding
+name in <code>data-raw/species_codings.R</code> (and, if the new coding
+is a “short” aggregation of an existing one, add a parent/child row to
+the internal aggregation registry). The builder takes care of
+<em>level</em>, <em>is_tree</em>, and non-tree codes automatically. What
+remains is the <em>code</em>: a vctrs S3 class plus the cast functions
+that connect the new coding to every other coding. The remaining steps
+cover that code side.</p>
+<div id="adapt-source-file" class="section level4">
+<h4>4.3.1 Copy the R-source file of an existing coding and adapt it</h4>
 <p>Now, you must provide the functions in order to make your new coding
 workable. While this sounds difficult, it is actually really easy.
 Before we explain how to do that, be aware of the following naming
@@ -2387,8 +2620,8 @@ and make the obvious adaptions in the function’s body.</p></li>
 functions users call for casts between codings</p></li>
 </ul>
 </div>
-<div id="add-a-species-coding-cast-function-to-each-other-coding" class="section level3">
-<h3>4.5 Add a species coding cast function to each other coding</h3>
+<div id="add-a-species-coding-cast-function-to-each-other-coding" class="section level4">
+<h4>4.3.2 Add a species coding cast function to each other coding</h4>
 <p>In the previous step, you have placed a <em>vec_cast</em> function
 that casts other codings into your new coding in the implementation of
 the new coding. Now, you have to add such a function that casts from
@@ -2401,8 +2634,8 @@ function
 <em>vec_cast.fe_species_ger_nfi_2023.fe_species_john_doe_coding</em>,
 and so on.</p>
 </div>
-<div id="document-the-new-coding" class="section level3">
-<h3>4.6 Document the new coding</h3>
+<div id="document-the-new-coding" class="section level4">
+<h4>4.3.3 Document the new coding</h4>
 <p>Clearly, when implementing your new species coding by <a href="#adapt-source-file">editing an existing source file</a>, you must
 adapt the existing documentation you find there to the new requirements.
 However, you must not forget to add your coding to the general
@@ -2411,18 +2644,23 @@ file <em>data_species_codings.R</em> which is Roxygen2 code. Add a short
 description and examples in the same style as you find it for the other
 codings.</p>
 </div>
-<div id="add-your-new-coding-to-the-automated-tests-for-species-codings" class="section level3">
-<h3>4.7 Add your new coding to the automated tests for species
-codings</h3>
+<div id="add-your-new-coding-to-the-automated-tests-for-species-codings" class="section level4">
+<h4>4.3.4 Add your new coding to the automated tests for species
+codings</h4>
 <p>The package ForestElementsR comprises a suite of automated tests. You
 must add your now coding also there. You find the implementations of the
 tests in the subdirectory <em>/tests/testhat/</em>; the files you need
 are called <em>test_species_coding_consistency</em>, and
-<em>test_species_coding_casts</em>. See how the tests for the other
-codings are implemented, and follow these examples.</p>
+<em>test_species_coding_casts</em>. Several tests also iterate over
+<em>all</em> codings (e.g. for canonical row order, completeness, name
+uniqueness, and non-tree handling); a new coding is picked up there
+automatically once it is part of <code>species_codings</code>. See how
+the tests for the other codings are implemented, and follow these
+examples.</p>
 </div>
-<div id="never-touch-the-source-file-fe_species_helper_functions.r" class="section level3">
-<h3>4.8 <strong>Never</strong> touch the source file
+</div>
+<div id="dev_never" class="section level3">
+<h3>4.4 <strong>Never</strong> touch the source file
 <em>fe_species_helper_functions.R</em></h3>
 <p>The functions in the source file
 <em>fe_species_helper_functions.R</em> were very carefully crafted, and
@@ -2434,7 +2672,7 @@ are doing, you will almost certainly goof it up.</p>
 </div>
 <div id="references" class="section level2 unnumbered">
 <h2 class="unnumbered">References</h2>
-<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
+<div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-bwi3_methods_2017" class="csl-entry">
 Riedel, T., P. Hennig, F. Kroiher, H. Polley, F. Schmitz, and
 Schwitzgebel F. 2017. <em>Die Dritte Bundeswaldinventur (BWI 2012).

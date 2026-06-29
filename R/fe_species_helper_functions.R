@@ -60,6 +60,40 @@ all_codes_allowed <- function(x, coding) {
 
 
 
+#' Assert That a Species Code Vector Contains Only Tree Species
+#'
+#' Used by the \code{fe_stand} object validators: non-tree codes (e.g. a shrub
+#' category, see \code{\link{fe_species_non_tree_codes}}) must not enter an
+#' \code{fe_stand} object or any of its children, because the package's methods
+#' work on trees only. Terminates with an error naming the offending codes if
+#' any non-tree species is present; \code{NA} codes are ignored. Codings without
+#' non-tree codes pass trivially.
+#'
+#' @param species_id An object of one of the \code{fe_species} classes
+#'
+#' @param where Short context string for the error message
+#'
+#' @return Invisibly \code{species_id}; called for the side effect of erroring
+#'
+#' @keywords internal
+#' @noRd
+#'
+.assert_tree_species <- function(species_id, where = "column `species_id`") {
+  is_t <- fe_species_is_tree(species_id)
+  bad  <- !is_t & !is.na(is_t)
+  if (any(bad)) {
+    codes <- unique(vctrs::vec_data(species_id)[bad])
+    stop(sprintf(
+      paste0("%s: non-tree species code(s) %s are not allowed in an fe_stand ",
+             "object (methods work on trees only); remove these records first."),
+      where, paste(codes, collapse = ", ")
+    ), call. = FALSE)
+  }
+  invisible(species_id)
+}
+
+
+
 
 #' Translate Species Codes into Names
 #'
@@ -105,6 +139,146 @@ translate_spec_codes_into_names <- function(x,
 
 
 
+#' Reduce a Coding Table to the Finest Code per Master Species
+#'
+#' For a hierarchical coding a single master species may appear under several
+#' codes (e.g. a single-species "leaf" code and one or more group codes that
+#' contain it). For casting *into* a coding we always want the finest available
+#' representation of a species. This helper keeps, for each \code{(genus,
+#' species_no)}, the row belonging to the finest code.
+#'
+#' "Finest" is determined by the column \code{level} if present (smaller =
+#' finer), otherwise by the species-set size (the number of master species
+#' sharing a \code{species_id}; smaller = finer). Under the laminarity
+#' invariant the codes containing a given master species form a chain, so the
+#' finest one is unique. For partition codings (each master species in exactly
+#' one code) this function is a no-op, including row order.
+#'
+#' @param coding_table A coding table as returned by
+#'   \code{\link{fe_species_get_coding_table}}
+#'
+#' @return The coding table reduced to one row per \code{(genus, species_no)}
+#'
+#' @keywords internal
+#' @noRd
+#'
+.finest_per_species <- function(coding_table) {
+  if ("level" %in% names(coding_table)) {
+    rnk <- coding_table[["level"]]
+  } else {
+    set_size <- table(coding_table[["species_id"]])
+    rnk <- as.integer(set_size[as.character(coding_table[["species_id"]])])
+  }
+  key <- paste(coding_table[["genus"]], coding_table[["species_no"]],
+               sep = "\r")
+  # Finest (= smallest) rank available per master species, in original order
+  min_rnk <- stats::ave(rnk, key, FUN = min)
+  keep    <- rnk == min_rnk
+  ct      <- coding_table[keep, , drop = FALSE]
+  # Should ties at the finest rank occur, keep the first in original order
+  ct[!duplicated(key[keep]), , drop = FALSE]
+}
+
+
+
+#' Validate that a Coding Table Forms a Laminar Hierarchy
+#'
+#' A hierarchical coding may map a master species to several codes (a fine
+#' "leaf" code and coarser group codes containing it), but the species-sets of
+#' any two codes must be either disjoint or nested (laminar). This validator
+#' enforces that invariant and a few related ones. It is meant to be called
+#' when a coding table is built (e.g. from a CSV).
+#'
+#' Checks performed:
+#' \itemize{
+#'   \item No two distinct codes cover an identical species-set.
+#'   \item The species-sets of any two codes are disjoint or nested (no partial
+#'     overlap).
+#'   \item If a \code{level} column is present: each code has a single level,
+#'     and a code nested inside another has a strictly smaller level.
+#' }
+#' Rows without a master link (\code{genus}/\code{species_no} \code{NA}, e.g.
+#' non-tree codes) are ignored, as they carry no species-set.
+#'
+#' @param coding_table A coding table as returned by
+#'   \code{\link{fe_species_get_coding_table}}
+#'
+#' @param coding_name Optional name of the coding, used in error messages
+#'
+#' @return Invisibly \code{coding_table}; called for the side effect of
+#'   terminating with an error on any violation.
+#'
+#' @keywords internal
+#' @noRd
+#'
+.validate_coding_laminar <- function(coding_table, coding_name = NULL) {
+  cn <- if (is.null(coding_name)) "" else paste0(" '", coding_name, "'")
+
+  # Only rows that link to a master species carry a species-set
+  link <- !is.na(coding_table$genus) & !is.na(coding_table$species_no)
+  ct   <- coding_table[link, , drop = FALSE]
+
+  key  <- paste(ct$genus, ct$species_no, sep = "\r")
+  sets <- lapply(split(key, ct$species_id), unique)
+  ids  <- names(sets)
+
+  has_level <- "level" %in% names(coding_table)
+  if (has_level) {
+    lvl_per_id <- vapply(
+      split(coding_table$level, coding_table$species_id),
+      function(z) {
+        u <- unique(z)
+        if (length(u) != 1L) NA_real_ else as.numeric(u)
+      },
+      numeric(1)
+    )
+    if (anyNA(lvl_per_id)) {
+      bad <- names(lvl_per_id)[is.na(lvl_per_id)]
+      stop(sprintf("Coding%s: code(s) %s have non-unique level values.",
+                   cn, paste(bad, collapse = ", ")), call. = FALSE)
+    }
+  }
+
+  for (i in seq_along(sets)) {
+    for (j in seq_len(i - 1L)) {
+      a <- sets[[i]]
+      b <- sets[[j]]
+      inter <- length(intersect(a, b))
+      if (inter == 0L) next # disjoint, fine
+      la <- length(a)
+      lb <- length(b)
+      if (inter < min(la, lb)) {
+        stop(sprintf(
+          "Coding%s is not laminar: codes '%s' and '%s' partially overlap.",
+          cn, ids[i], ids[j]
+        ), call. = FALSE)
+      }
+      if (la == lb) {
+        stop(sprintf(
+          "Coding%s: codes '%s' and '%s' cover an identical species set.",
+          cn, ids[i], ids[j]
+        ), call. = FALSE)
+      }
+      if (has_level) {
+        smaller <- if (la < lb) ids[i] else ids[j]
+        larger  <- if (la < lb) ids[j] else ids[i]
+        if (!(lvl_per_id[[smaller]] < lvl_per_id[[larger]])) {
+          stop(sprintf(
+            paste0("Coding%s: level of nested code '%s' (%s) is not smaller ",
+                   "than that of '%s' (%s)."),
+            cn, smaller, lvl_per_id[[smaller]], larger, lvl_per_id[[larger]]
+          ), call. = FALSE)
+        }
+      }
+    }
+  }
+
+  invisible(coding_table)
+}
+
+
+
+
 #' Check an Intended Species Coding Cast for Complete Matches in the Goal Coding
 #'
 #' This function is happy if each code in the original species coding has a
@@ -142,7 +316,7 @@ spec_id_cast_all_specs_in_goal_coding <- function(x, coding_from, coding_to) {
     dplyr::filter(.data$species_id %in% vctrs::vec_data(x)) |>
     dplyr::rename(species_id_from = "species_id")
 
-  codes_to <- fe_species_get_coding_table(coding_to) |>
+  codes_to <- .finest_per_species(fe_species_get_coding_table(coding_to)) |>
     dplyr::rename(species_id_to = "species_id")
 
 
@@ -200,7 +374,7 @@ spec_id_cast_unambiguous <- function(x, coding_from, coding_to) {
     dplyr::filter(.data$species_id %in% vctrs::vec_data(x)) |>
     dplyr::rename(species_id_from = "species_id")
 
-  codes_to <- fe_species_get_coding_table(coding_to) |>
+  codes_to <- .finest_per_species(fe_species_get_coding_table(coding_to)) |>
     dplyr::rename(species_id_to = "species_id")
 
   ambi_tab <- codes_from |>
@@ -269,7 +443,7 @@ spec_id_cast_loss_free <- function(x, coding_from, coding_to) {
     dplyr::filter(.data$species_id %in% vctrs::vec_data(x)) |>
     dplyr::rename(species_id_from = "species_id")
 
-  codes_to <- fe_species_get_coding_table(coding_to) |>
+  codes_to <- .finest_per_species(fe_species_get_coding_table(coding_to)) |>
     dplyr::rename(species_id_to = "species_id")
 
   ambi_tab <- codes_from |>
@@ -302,7 +476,7 @@ spec_id_cast_loss_free <- function(x, coding_from, coding_to) {
 #' Validate an Intended Cast from One **fe_species** to Another
 #'
 #' Terminates with an error if the intended cast is forward ambiguous, and
-#' issues a warning, if the cast would come with a loss of information (i.e.
+#' issues a message, if the cast would come with a loss of information (i.e.
 #' backward ambiguous)
 #'
 #' Note that a cast where only one species_id from the original coding
@@ -321,7 +495,7 @@ spec_id_cast_loss_free <- function(x, coding_from, coding_to) {
 #'
 #' @return If the cast is forward unambigous, the original \code{x} will be
 #'   returned invisibly. Otherwise the function terminates with an error. A
-#'   warning is issued in case the cast would lose information (i.e. cast
+#'   message is issued in case the cast would lose information (i.e. cast
 #'   several species which are distinct in the original coding into the same
 #'   group code in the goal coding).
 #'
@@ -352,7 +526,10 @@ spec_id_cast_validate <- function(x, coding_from, coding_to) {
 
   rslt <- spec_id_cast_loss_free(x, coding_from, coding_to)
   if (!rslt$rqmt_ok) {
-    warning(rslt$err_message, call. = FALSE)
+    # Information loss when casting fine codes into a coarser group is the
+    # normal, intended outcome of an aggregation, so it is signalled as a
+    # message (not a warning). Forward ambiguity above stays an error.
+    message(rslt$err_message)
   }
 
   invisible(x)
@@ -360,11 +537,42 @@ spec_id_cast_validate <- function(x, coding_from, coding_to) {
 
 
 
+#' Declarative Registry of Species Coding Cast Overrides
+#'
+#' Some source group codes straddle several groups in a goal coding and thus
+#' have no single matching target node (genuine forward ambiguity, e.g.
+#' \code{ger_nfi_2012} code "290", which maps mostly to \code{tum_wwk_short}
+#' "8" but contains one species belonging to "9"). For such cases this registry
+#' declares the deliberately chosen target code. \code{\link{spec_id_cast_do_it}}
+#' consults it: a matching source code is resolved to the registered target
+#' (with a message) instead of raising an ambiguity error. The resolution is
+#' lossy by nature and is the maintainer's deliberate choice. Keyed by
+#' \code{(coding_from, coding_to, species_id_from)}.
+#'
+#' The registry is the package data object \code{\link{species_cast_overrides}},
+#' built from the editable CSV \code{data-raw/codings/cast_overrides.csv} via
+#' \code{\link{cast_overrides_from_csv}} (CSV-driven, like the codings).
+#'
+#' @return A tibble with columns \code{coding_from}, \code{coding_to},
+#'   \code{species_id_from}, \code{species_id_to}
+#'
+#' @noRd
+#'
+spec_id_cast_overrides <- function() {
+  ForestElementsR::species_cast_overrides
+}
+
+
+
 #' Perform an Species ID Cast
 #'
 #' Performs an actual species id cast between two **fe_species** codings, but
-#' terminates with an error if the cast were forward ambiguous. A warning is
+#' terminates with an error if the cast were forward ambiguous. A message is
 #' issued (but the cast is performed) if it comes with a loss of information.
+#'
+#' Forward-ambiguous source codes for which a deliberate target is declared in
+#' \code{\link{spec_id_cast_overrides}} are resolved to that target with a
+#' message instead of raising an error.
 #'
 #' @param x x Vector of species codes (\code{character}) or an object of an
 #'   **fe_species** class
@@ -396,15 +604,52 @@ spec_id_cast_validate <- function(x, coding_from, coding_to) {
 spec_id_cast_do_it <- function(x, coding_from, coding_to) {
   x <- vctrs::vec_data(x)
 
-  # Check cast. If the casting is ambigous, we will stop here with an error ...
-  spec_id_cast_validate(x, coding_from, coding_to)
+  # Declarative overrides for otherwise forward-ambiguous casts (replaces the
+  # former hard-wiring, e.g. ger_nfi_2012 "290" -> tum_wwk_short "8"). Only
+  # entries whose source code actually occurs in x are relevant.
+  ov <- spec_id_cast_overrides()
+  ov <- ov[ov$coding_from == coding_from &
+             ov$coding_to == coding_to &
+             ov$species_id_from %in% x, , drop = FALSE]
+  ov_pos <- x %in% ov$species_id_from
+
+  if (nrow(ov) > 0) {
+    message(
+      "Applied cast override(s) ", coding_from, " -> ", coding_to, ": ",
+      paste(ov$species_id_from, "->", ov$species_id_to, collapse = ", ")
+    )
+  }
+
+  # Non-tree source codes (e.g. a shrub category) have no species equivalent in
+  # any species coding -> they become NA (with a message). Like overrides they
+  # are kept out of the regular cast, but they are NOT patched back, so they
+  # stay NA. (In normal use non-tree records are already rejected at fe_stand
+  # object construction; this is the graceful fallback for bare casts.)
+  nt_codes <- fe_species_non_tree_codes(coding_from)
+  nt_pos   <- x %in% nt_codes
+  if (any(nt_pos)) {
+    message(
+      "Non-tree code(s) ", paste(unique(x[nt_pos]), collapse = ", "),
+      " have no equivalent in coding '", coding_to, "' and become NA."
+    )
+  }
+
+  # Overridden and non-tree codes are excluded from the regular (validated)
+  # cast (set to NA, which also keeps them out of the ambiguity check);
+  # overridden codes are patched back afterwards, non-tree codes stay NA.
+  x_reg <- x
+  x_reg[ov_pos | nt_pos] <- NA
+
+  # Check cast. If the (remaining) casting is ambiguous, we stop here with an
+  # error ...
+  spec_id_cast_validate(x_reg, coding_from, coding_to)
 
   # ... so after this point casting is safe
   codes_from <- fe_species_get_coding_table(coding_from) |>
-    dplyr::filter(.data$species_id %in% vctrs::vec_data(x)) |>
+    dplyr::filter(.data$species_id %in% x_reg) |>
     dplyr::rename(species_id_from = "species_id")
 
-  codes_to <- fe_species_get_coding_table(coding_to) |>
+  codes_to <- .finest_per_species(fe_species_get_coding_table(coding_to)) |>
     dplyr::rename(species_id_to = "species_id")
 
   transltn_tab <- codes_from |>
@@ -415,8 +660,14 @@ spec_id_cast_do_it <- function(x, coding_from, coding_to) {
   names(trans_vec) <- transltn_tab |> purrr::pluck("species_id_from")
 
   # translate
-  rslt <- trans_vec[x]
+  rslt <- trans_vec[x_reg]
   names(rslt) <- NULL
+
+  # patch in the deliberately chosen override targets
+  if (nrow(ov) > 0) {
+    ov_map <- stats::setNames(ov$species_id_to, ov$species_id_from)
+    rslt[ov_pos] <- unname(ov_map[x[ov_pos]])
+  }
 
   rslt # always character, must be made fe_species in the caller
 }

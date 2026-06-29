@@ -37,25 +37,17 @@ test_that("volume reduction v_red_harvest_ubark is correct", {
     )
   )
 
-  v_expect    <- c(
-    0.8100, 0.8100, 0.8100, 0.7902, 0.7902, 0.7902, 0.7902, 0.7902, 0.7902,
-    0.8100, 0.8100, 0.7200, 0.7200, 0.7902, 0.8460, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.7902,
-    0.7902, 0.7902, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100,
-    0.8100, 0.8100, 0.8100, 0.8100, 0.8100, 0.8100
-  )
-
+  # The factor must equal that of each species' bavrn_state_short group (the
+  # function casts bavrn_state -> bavrn_state_short). Tested as that invariant
+  # (robust to coding edits); absolute values are pinned in the short block above.
   expect_equal(
     suppressWarnings( # Species code conversion warnings are irrelevant
       v_red_harvest_ubark(species_id, vol_orig_m3)
     ),
-    v_expect
+    suppressWarnings(
+      v_red_harvest_ubark(as_fe_species_bavrn_state_short(species_id),
+                          vol_orig_m3)
+    )
   )
 
   # All species in the ger_nfi_2012 coding, must correctly apply

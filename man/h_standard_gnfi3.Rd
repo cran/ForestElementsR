@@ -94,7 +94,7 @@ provided species codes are not required to be the same for each tree.
 \insertAllCited{}
 }
 \seealso{
-Other standard height curve systems: 
-\code{\link{h_standard_bv}()}
+Other standard height curve systems:
+\code{\link[=h_standard_bv]{h_standard_bv()}}
 }
 \concept{standard height curve systems}

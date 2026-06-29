@@ -43,6 +43,23 @@ species_master_table |>
   filter(genus == "quercus" & species_no %in% c("001", "002")) |>
   select(-deciduous_conifer)
 
+## ----view_hierarchy_levels----------------------------------------------------
+fe_species_get_coding_table("bavrn_state") |>
+  filter(species_id %in% c("54", "55", "70")) |>
+  select(species_id, genus, species_no, name_eng, level)
+
+## ----finest_node_cast---------------------------------------------------------
+as_fe_species_bavrn_state(fe_species_master("quercus_001")) |> unclass()
+
+## ----non_tree_helpers---------------------------------------------------------
+fe_species_non_tree_codes("bavrn_state")
+
+spec_ids <- fe_species_bavrn_state(c("10", "60", "99"))
+fe_species_is_tree(spec_ids)
+
+## ----field_table_demo---------------------------------------------------------
+fe_species_get_field_table("tum_wwk_short")
+
 ## ----create_species_code_vectors----------------------------------------------
 spec_ids_1 <- fe_species_tum_wwk_short(c(1, 1, 1, 5, 5, 5, 5, 3, 3, 8, 9, 8))
 spec_ids_2 <- fe_species_ger_nfi_2012(
@@ -156,6 +173,12 @@ spec_ids_1 |> format("eng")
 spec_ids_2 <- as_fe_species_tum_wwk_short(spec_ids_1)
 spec_ids_2 |> format("eng")
 
+## ----finest_node_cast_usage---------------------------------------------------
+# Pedunculate and sessile oak resolve to the single codes 54 and 55,
+# not to the group code 70
+as_fe_species_bavrn_state(fe_species_master(c("quercus_001", "quercus_002"))) |>
+  format("code")
+
 ## ----impossible_conversion_no_match, error = TRUE-----------------------------
 try({
 spec_ids <- as_fe_species_bavrn_state(c("11", "11", "11"))
@@ -177,6 +200,17 @@ spec_ids |> as_fe_species_ger_nfi_2012()
 # Similar
 as_fe_species_master(fe_species_ger_nfi_2012("90"))
 })
+
+## ----cast_override------------------------------------------------------------
+species_cast_overrides
+
+# ger_nfi_2012 code 290 has no single match in tum_wwk_short, but the
+# override resolves it to code 8
+as_fe_species_tum_wwk_short(fe_species_ger_nfi_2012("290")) |> format("code")
+
+## ----non_tree_cast------------------------------------------------------------
+as_fe_species_tum_wwk_short(fe_species_bavrn_state(c("10", "99"))) |>
+  unclass()
 
 ## ----good_and_bad_conversions_between_same_types, error = TRUE----------------
 try({

@@ -379,7 +379,7 @@ vec_cast.fe_species_bavrn_state_short.fe_species_master <-
 #' If the cast is forward ambiguous, the function terminates with an error.
 #' "Forward ambiguous" means that one code in the original object corresponds to
 #' more than one codes in the goal coding. If the cast loses information, a
-#' warning is raised, but the cast is performed. "Information loss" in this
+#' message is raised, but the cast is performed. "Information loss" in this
 #' context means that several codes from the orginal coding correspond to only
 #' one code in the goal coding.
 #'

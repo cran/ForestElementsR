@@ -72,15 +72,15 @@ User Friendly Construction of an \strong{fe_yield_table} Object from a Data Fram
 
 }
 \seealso{
-Other yield table functions: 
-\code{\link{plot.fe_yield_table}()},
-\code{\link{si_to_mai_age}()},
-\code{\link{si_to_mai_max}()},
-\code{\link{site_index}()},
-\code{\link{stocking_level}()},
+Other yield table functions:
+\code{\link[=plot.fe_yield_table]{plot.fe_yield_table()}},
+\code{\link[=si_to_mai_age]{si_to_mai_age()}},
+\code{\link[=si_to_mai_max]{si_to_mai_max()}},
+\code{\link[=site_index]{site_index()}},
+\code{\link[=stocking_level]{stocking_level()}},
 \code{\link{yield_tables_for_species}},
-\code{\link{ytable_age_slice}()},
-\code{\link{ytable_lookup}()},
-\code{\link{ytable_max_slice}()}
+\code{\link[=ytable_age_slice]{ytable_age_slice()}},
+\code{\link[=ytable_lookup]{ytable_lookup()}},
+\code{\link[=ytable_max_slice]{ytable_max_slice()}}
 }
 \concept{yield table functions}

@@ -340,19 +340,9 @@ vec_cast.fe_species_tum_wwk_short.character <-
 #' @export
 vec_cast.fe_species_tum_wwk_short.fe_species_ger_nfi_2012 <-
   function(x, to, ...) {
-    # Hard check for code 290 in source vector which is the only species group
-    # that hinders complete conversion of the coding into tum_wwk_short. We
-    # override this for the time being with goal code 8 which is what most
-    # species in group 290 belong to.
-    x_290_check_hard <- unclass(x) == "290"
-    hard_flag        <- sum(x_290_check_hard) > 0
-    if (hard_flag) {
-      message("Hard wired species code cast from 290 (source) to 8 (goal)")
-      index    <- which(x_290_check_hard)
-      x[index] <- NA
-    }
+    # Forward-ambiguous source codes (e.g. ger_nfi_2012 "290") are resolved via
+    # the declarative override registry inside spec_id_cast_do_it().
     x_trans <- spec_id_cast_do_it(x, "ger_nfi_2012", "tum_wwk_short")
-    if (hard_flag) x_trans[index] <- "8"
     fe_species_tum_wwk_short(x_trans)
   }
 
@@ -392,7 +382,7 @@ vec_cast.fe_species_tum_wwk_short.fe_species_master <-
 #' If the cast is forward ambiguous, the function terminates with an error.
 #' "Forward ambiguous" means that one code in the original object corresponds to
 #' more than one codes in the goal coding. If the cast loses information, a
-#' warning is raised, but the cast is performed. "Information loss" in this
+#' message is raised, but the cast is performed. "Information loss" in this
 #' context means that several codes from the orginal coding correspond to only
 #' one code in the goal coding.
 #'

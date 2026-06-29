@@ -55,8 +55,8 @@ the input parameter \code{species_id}.
 \insertAllCited{}
 }
 \seealso{
-Other structure and diversity: 
-\code{\link{assmann_layers}()},
-\code{\link{species_profile}()}
+Other structure and diversity:
+\code{\link[=assmann_layers]{assmann_layers()}},
+\code{\link[=species_profile]{species_profile()}}
 }
 \concept{structure and diversity}

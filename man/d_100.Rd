@@ -66,8 +66,8 @@ options(oldopt) # set species name display to previous value
 
 }
 \seealso{
-Other stand diameters: 
-\code{\link{d_dom_weise}()},
-\code{\link{d_q}()}
+Other stand diameters:
+\code{\link[=d_dom_weise]{d_dom_weise()}},
+\code{\link[=d_q]{d_q()}}
 }
 \concept{stand diameters}

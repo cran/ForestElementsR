@@ -67,7 +67,7 @@ provided species codes are not required to be the same for each tree.
 \insertAllCited{}
 }
 \seealso{
-Other standard height curve systems: 
-\code{\link{h_standard_gnfi3}()}
+Other standard height curve systems:
+\code{\link[=h_standard_gnfi3]{h_standard_gnfi3()}}
 }
 \concept{standard height curve systems}

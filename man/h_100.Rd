@@ -73,9 +73,9 @@ options(oldopt) # set species name display to previous value
 
 }
 \seealso{
-Other stand heights: 
-\code{\link{h_dom_weise}()},
-\code{\link{h_q}()},
-\code{\link{h_q_from_d_q}()}
+Other stand heights:
+\code{\link[=h_dom_weise]{h_dom_weise()}},
+\code{\link[=h_q]{h_q()}},
+\code{\link[=h_q_from_d_q]{h_q_from_d_q()}}
 }
 \concept{stand heights}

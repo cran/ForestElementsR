@@ -54,8 +54,8 @@ d_100(d_cm, 1)
 
 }
 \seealso{
-Other stand diameters: 
-\code{\link{d_100}()},
-\code{\link{d_q}()}
+Other stand diameters:
+\code{\link[=d_100]{d_100()}},
+\code{\link[=d_q]{d_q()}}
 }
 \concept{stand diameters}

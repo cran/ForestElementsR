@@ -238,7 +238,7 @@ logical problem in the specific situation to solve, even when the two codings of
 interest are not entirely compatible. That means, e.g., when incompatibilities
 between two codings exist for very uncommon species or species groups only, they
 will not hamper the majority of casts. When a species coding cast loses 
-information, a warning will be issued, but the cast will be executed. This is 
+information, a message will be issued, but the cast will be executed. This is 
 the case when a species cast leads from an individually coded species in the 
 original coding into a species group code in the goal coding. Currently, six 
 species codings are implemented in *ForestElementsR*. Five of them are codings 

@@ -76,8 +76,8 @@ species coding is used for the input parameter \code{species_id}.
 \insertAllCited{}
 }
 \seealso{
-Other structure and diversity: 
-\code{\link{assmann_layers}()},
-\code{\link{shannon_index}()}
+Other structure and diversity:
+\code{\link[=assmann_layers]{assmann_layers()}},
+\code{\link[=shannon_index]{shannon_index()}}
 }
 \concept{structure and diversity}

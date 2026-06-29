@@ -300,6 +300,9 @@ validate_fe_stand_spatial <- function(x) {
     )
   }
 
+  ### - No non-tree codes (e.g. shrubs) allowed
+  .assert_tree_species(x$trees$species_id, "data.frame `trees`")
+
 
   ## Check for missing values in columns which must be complete
   required_complete <- c(

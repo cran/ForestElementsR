@@ -34,16 +34,16 @@ yield table assignemnts for the same coding can be defined and coexist. In
 future, such tables will be added also for less aggregated species codings.
 }
 \seealso{
-Other yield table functions: 
-\code{\link{fe_yield_table}()},
-\code{\link{plot.fe_yield_table}()},
-\code{\link{si_to_mai_age}()},
-\code{\link{si_to_mai_max}()},
-\code{\link{site_index}()},
-\code{\link{stocking_level}()},
-\code{\link{ytable_age_slice}()},
-\code{\link{ytable_lookup}()},
-\code{\link{ytable_max_slice}()}
+Other yield table functions:
+\code{\link[=fe_yield_table]{fe_yield_table()}},
+\code{\link[=plot.fe_yield_table]{plot.fe_yield_table()}},
+\code{\link[=si_to_mai_age]{si_to_mai_age()}},
+\code{\link[=si_to_mai_max]{si_to_mai_max()}},
+\code{\link[=site_index]{site_index()}},
+\code{\link[=stocking_level]{stocking_level()}},
+\code{\link[=ytable_age_slice]{ytable_age_slice()}},
+\code{\link[=ytable_lookup]{ytable_lookup()}},
+\code{\link[=ytable_max_slice]{ytable_max_slice()}}
 }
 \concept{yield table functions}
 \keyword{datasets}

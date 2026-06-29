@@ -37,8 +37,8 @@ interest).
 \insertAllCited{}
 }
 \seealso{
-Other structure and diversity: 
-\code{\link{shannon_index}()},
-\code{\link{species_profile}()}
+Other structure and diversity:
+\code{\link[=shannon_index]{shannon_index()}},
+\code{\link[=species_profile]{species_profile()}}
 }
 \concept{structure and diversity}

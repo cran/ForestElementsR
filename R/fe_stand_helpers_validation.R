@@ -37,6 +37,8 @@
 #'
 #' @keywords internal
 #'
+#' @export
+#'
 has_required_names <- function(x, required_names) {
   actual_names <- names(x)
   i <- which(!(required_names %in% actual_names))
@@ -103,6 +105,8 @@ has_required_type_or_class <- function(x, rqmt) {
 #'   function (mentions all problematic elements)
 #'
 #' @keywords internal
+#'
+#' @export
 #'
 has_required_types_or_classes <- function(x, names_and_rqmts) {
   stopifnot(tibble::is_tibble(names_and_rqmts))
@@ -191,7 +195,8 @@ has_required_lengths <- function(x, names_and_rqmts) {
 #'
 #' @keywords internal
 #'
-
+#' @export
+#'
 has_no_missing_values <- function(x, names) {
   stopifnot(is.data.frame(x))
 
@@ -230,6 +235,8 @@ has_no_missing_values <- function(x, names) {
 #'   function (mentions all problematic elements)
 #'
 #' @keywords internal
+#'
+#' @export
 #'
 is_distinct <- function(x, combinations) {
   stopifnot(is.data.frame(x))

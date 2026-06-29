@@ -87,7 +87,7 @@ library(ForestElementsR)
 
     ## Lade nötiges Paket: sf
 
-    ## Linking to GEOS 3.13.1, GDAL 3.11.0, PROJ 9.6.0; sf_use_s2() is TRUE
+    ## Linking to GEOS 3.13.1, GDAL 3.10.2, PROJ 9.5.1; sf_use_s2() is TRUE
 
 ``` r
 # Estimate the mean tree's merchantable wood volume over bark in m³ with the
@@ -250,6 +250,11 @@ mm_forest_1_fe_stand_spatial$trees
 ``` r
 # Stand sum and mean values on species level
 sts_sta <- mm_forest_1_fe_stand_spatial |> stand_sums_static() 
+```
+
+    ## Cast loses information. Goal code(s) 8 correspond to 2 original code(s).
+
+``` r
 sts_sta |> print(n = Inf)
 ```
 
@@ -305,6 +310,7 @@ sts_dyn <- mm_forest_1_fe_stand_spatial |> stand_sums_dynamic()
 ```
 
     ## Joining with `by = join_by(species_id, time_yr)`
+    ## Cast loses information. Goal code(s) 8 correspond to 2 original code(s).
     ## Joining with `by = join_by(time_yr, species_id)`
     ## Joining with `by = join_by(time_yr, species_id)`
 

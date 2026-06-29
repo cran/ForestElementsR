@@ -56,15 +56,15 @@ and its expected basal area due to a yield table.
 
 }
 \seealso{
-Other yield table functions: 
-\code{\link{fe_yield_table}()},
-\code{\link{plot.fe_yield_table}()},
-\code{\link{si_to_mai_age}()},
-\code{\link{si_to_mai_max}()},
-\code{\link{site_index}()},
+Other yield table functions:
+\code{\link[=fe_yield_table]{fe_yield_table()}},
+\code{\link[=plot.fe_yield_table]{plot.fe_yield_table()}},
+\code{\link[=si_to_mai_age]{si_to_mai_age()}},
+\code{\link[=si_to_mai_max]{si_to_mai_max()}},
+\code{\link[=site_index]{site_index()}},
 \code{\link{yield_tables_for_species}},
-\code{\link{ytable_age_slice}()},
-\code{\link{ytable_lookup}()},
-\code{\link{ytable_max_slice}()}
+\code{\link[=ytable_age_slice]{ytable_age_slice()}},
+\code{\link[=ytable_lookup]{ytable_lookup()}},
+\code{\link[=ytable_max_slice]{ytable_max_slice()}}
 }
 \concept{yield table functions}

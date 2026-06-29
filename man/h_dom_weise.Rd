@@ -66,9 +66,9 @@ h_100(h_m, d_cm, 1)
 
 }
 \seealso{
-Other stand heights: 
-\code{\link{h_100}()},
-\code{\link{h_q}()},
-\code{\link{h_q_from_d_q}()}
+Other stand heights:
+\code{\link[=h_100]{h_100()}},
+\code{\link[=h_q]{h_q()}},
+\code{\link[=h_q_from_d_q]{h_q_from_d_q()}}
 }
 \concept{stand heights}

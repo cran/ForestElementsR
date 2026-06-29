@@ -3,40 +3,25 @@ library(ForestElementsR)
 
 
 test_that("species master table and all coding tables are complete (no NA's)", {
-  # species master table
+  # species master table: every cell filled
   expect_identical(
     nrow(species_master_table), sum(complete.cases(species_master_table))
   )
-  # coding master
-  coding_table <- fe_species_get_coding_table("master")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
-  # coding tum_wwk_short
-  coding_table <- fe_species_get_coding_table("tum_wwk_short")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
-  # coding ger_nfi_2012
-  coding_table <- fe_species_get_coding_table("ger_nfi_2012")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
-  # coding bavrn_state
-  coding_table <- fe_species_get_coding_table("bavrn_state")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
-  # coding bavrn_state_short
-  coding_table <- fe_species_get_coding_table("bavrn_state_short")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
-  # coding tum_wwk_long
-  coding_table <- fe_species_get_coding_table("tum_wwk_long")
-  expect_identical(
-    nrow(coding_table), sum(complete.cases(coding_table))
-  )
+
+  # Coding tables: the always-present columns must be complete. The master-link
+  # columns (genus, species_no, deciduous_conifer) are filled exactly for tree
+  # codes and NA for non-tree codes (e.g. bavrn_state 99 "shrub").
+  always <- c("species_id", "name_sci", "name_eng", "name_ger", "level",
+              "is_tree")
+  link   <- c("genus", "species_no", "deciduous_conifer")
+  for (coding in c("master", "tum_wwk_short", "ger_nfi_2012", "bavrn_state",
+                   "bavrn_state_short", "tum_wwk_long")) {
+    ct <- fe_species_get_coding_table(coding)
+    expect_true(all(complete.cases(ct[, always])), info = coding)
+    expect_identical(
+      stats::complete.cases(ct[, link]), ct$is_tree, info = coding
+    )
+  }
 })
 
 
@@ -178,9 +163,9 @@ test_that("nested codings convert without error from outer to inner", {
     unique() |>
     as_fe_species_tum_wwk_long()
 
-  # Nesting the expect_ was necessary because suppressing warnings as normal
+  # Nesting the expect_ was necessary because suppressing messages as normal
   # made the test being skipped
-  expect_warning( # Species cast warnings must come from casting into groups
+  expect_message( # Species cast messages must come from casting into groups
     expect_no_error(
       as_fe_species_tum_wwk_short(outer)
     )
@@ -191,9 +176,9 @@ test_that("nested codings convert without error from outer to inner", {
     unique() |>
     as_fe_species_bavrn_state()
 
-  # Nesting the expect_ was necessary because suppressing warnings as normal
+  # Nesting the expect_ was necessary because suppressing messages as normal
   # made the test being skipped
-  expect_warning(  # Species cast warnings must come from casting into groups
+  expect_message(  # Species cast messages must come from casting into groups
     expect_no_error(
       as_fe_species_bavrn_state_short(outer)
     )

@@ -138,7 +138,22 @@ coding table is not allowed to contain any combination of *genus* and
 species names, however, may differ from those in the master table in
 order to allow e.g. for regional colloquial naming preferences or, more
 importantly, for naming species groups which, by definition, do not
-exist in the master table. Let us have a view on the coding in compact
+exist in the master table.
+
+Besides *species_id*, every coding table carries two more columns,
+*level* and *is_tree*. The column *level* marks how fine or coarse a code
+is: *0* is the finest level (a single species, or a group that is not
+contained in any other group of the coding), and higher numbers denote
+ever coarser groups that nest the finer ones. For a "flat" coding that
+only distinguishes single species and non-overlapping groups, *level* is
+*0* throughout. Codings that additionally provide nesting group codes are
+called *hierarchical*; they are explained in
+[Section 2.2.2](#hierarchical_codings). The column *is_tree* is *TRUE*
+for all ordinary tree-species codes and *FALSE* for the rare codes that
+denote a non-tree category such as a shrub; see
+[Section 2.2.3](#non_tree_codes).
+
+Let us have a view on the coding in compact
 form:
 
 ```{r view_coding_compact}
@@ -181,7 +196,78 @@ species_master_table |>
   select(-deciduous_conifer)
 ```
 
-#### 2.1.2 Implemented codings {#implemented_codings}
+#### 2.2.2 Species groups and hierarchical codings {#hierarchical_codings}
+
+Almost every real-world coding distinguishes not only single species but
+also *species groups*. In the simplest case, a coding is a *partition*:
+each species belongs to exactly one code, and the codes never overlap.
+The *tum_wwk_short* coding used above is such a partition - the group
+codes 8, 9, and 10 are disjoint, and so are the single-species codes.
+
+Some codings, however, need a species to appear **both** as its own code
+**and** inside a coarser group of the *same* coding. The Bavarian state
+coding *bavrn_state*, for instance, codes the pedunculate oak singly as
+*54* and the sessile oak singly as *55*, but it also keeps the older
+group code *70* ("oak") that comprises both. Such codings are called
+*hierarchical*. To keep casting between codings well defined, the codes
+of a coding must form a *laminar family*: the species sets of any two
+codes are either disjoint or fully nested - partial overlaps are
+forbidden. The column *level* records the nesting depth (0 = finest leaf,
+higher = coarser group).
+
+We can see this directly in the coding table of *bavrn_state*. The leaf
+codes 54 and 55 sit at level 0, while the group code 70 that contains
+them sits at level 1:
+
+```{r view_hierarchy_levels}
+fe_species_get_coding_table("bavrn_state") |>
+  filter(species_id %in% c("54", "55", "70")) |>
+  select(species_id, genus, species_no, name_eng, level)
+```
+
+When a species is *cast into* a hierarchical coding, it is always
+resolved to the **finest** code that represents it. The pedunculate oak
+(*quercus_001* in the master coding) therefore becomes the leaf code 54,
+not the group code 70:
+
+```{r finest_node_cast}
+as_fe_species_bavrn_state(fe_species_master("quercus_001")) |> unclass()
+```
+
+
+
+#### 2.2.3 Non-tree codes {#non_tree_codes}
+
+A few codings contain legal codes that do not stand for a tree species
+and that one cannot compute with - for example the *bavrn_state* code
+*99* ("Strauch", shrub). Such codes are flagged with *is_tree = FALSE* in
+the coding table. Whether a code is a tree code is *derived* from its
+link to the species master table (a code that resolves to at least one
+master species is a tree code), so there is no separate flag that could
+fall out of sync.
+
+Two exported helpers report this information. `fe_species_non_tree_codes()`
+lists the non-tree codes of a coding, and `fe_species_is_tree()` tests,
+element by element, whether the codes of an **fe_species** vector denote
+tree species:
+
+```{r non_tree_helpers}
+fe_species_non_tree_codes("bavrn_state")
+
+spec_ids <- fe_species_bavrn_state(c("10", "60", "99"))
+fe_species_is_tree(spec_ids)
+```
+
+Constructing a species vector that contains a non-tree code is allowed
+(the code is part of the coding), but objects that are meant to hold
+computable trees - such as `fe_stand()` and its relatives - reject them
+with a clear error. When a non-tree code is *cast* into another coding,
+it resolves to `NA` (with a message), because it has no tree-species
+equivalent.
+
+
+
+#### 2.2.4 Implemented codings {#implemented_codings}
 
 Six species codings are currently implemented. While their
 documentation is available in the package, and can be accessed with
@@ -203,21 +289,52 @@ documentation is available in the package, and can be accessed with
 -   **tum_wwk_long:** This is one of two codings in use at the Chair of
     Forest Growth and Yield Science at the Technical University of
     Munich. It defines a larger set of single species than the
-    *tum_wwk_short* coding. In its original version, this coding
-    contains several species groups, but most of these groups are
-    ambiguous as they include species for which also a single code is
-    provided. These ambiguous groups were not included in this package.
+    *tum_wwk_short* coding. This coding is *hierarchical* (see
+    [Section 2.2.2](#hierarchical_codings)): besides the single-species
+    (leaf) codes it also provides the coarser species-group codes that
+    contain them, and it covers every species of the master table.
 
 -   **bavrn_state:** This species coding is the coding used by the
-    Bavarian State Forest Service.
+    Bavarian State Forest Service. It is *hierarchical* (e.g. the single
+    oak codes 54 and 55 nest in the group code 70), and it contains one
+    non-tree code (99, "Strauch"/shrub; see
+    [Section 2.2.3](#non_tree_codes)).
     
--   **bavrn_state_short:** This coding that combines the species of 
+-   **bavrn_state_short:** This coding combines the species of 
     *bavrn_state* into larger groups. These groups are typically used
     by the Bavarian State Forest Service in aggregated evaluations.    
 
 -   **ger_nfi_2012:** The ger_nfi_2012 species coding is the species
     coding used by the German National Forest Inventory of 2012
     [@bwi3_methods_2017].
+
+
+#### 2.2.5 A field-ready coding table {#field_table}
+
+The full coding table returned by `fe_species_get_coding_table()` carries
+*one row per elementary species*. For a hierarchical coding this means a
+species can occur several times (once as a leaf code and once in each
+group that contains it), and a group code spreads over as many rows as it
+has member species. That is exactly what the casting machinery needs, but
+it is awkward as a printed lookup key for field work.
+
+For that purpose there is `fe_species_get_field_table()`. It returns the
+*code-level* view: **each code exactly once**, together with the name of
+the species or group it stands for. The names are taken from the coding
+itself (not from the master table), so group names appear as such, and
+all three name columns are always included regardless of the
+`fe_spec_lang` option. The rows are in the coding's canonical order
+(leaf codes first, then the coarser groups), and the *level* and
+*is_tree* columns are kept, as both matter in the field:
+
+```{r field_table_demo}
+fe_species_get_field_table("tum_wwk_short")
+```
+
+Rendering such a table into a nicely formatted, printable document (e.g.
+a PDF) is deliberately left to the downstream packages that already carry
+a document-rendering toolchain; *ForestElementsR* itself only provides
+the data.
 
 
 ## 3. Usage
@@ -403,7 +520,7 @@ format(spec_vec, "eng") # ... which is Scots pine in the goal coding
 ```
 
 
-### 3.3 Species code conversions
+### 3.3 Species code conversions {#species_code_conversions}
 
 For each implemented species coding there is a function
 *as_fe_species_coding_name* which tries to convert an object of any
@@ -420,7 +537,11 @@ as_fe_species_ger_nfi_2012(spec_ids) |> format("eng")
 When the initial species code vector contains codes which belong to the
 same species group in the goal coding, information is lost when doing
 the conversion. This is a *backward ambiguous cast*. In such a case, the
-conversion is executed, but a warning is issued.
+conversion is executed, but a *message* is issued. (In earlier versions
+of the package this was a *warning*; it was downgraded to a message
+because such information loss is the normal, intended outcome of
+aggregating into coarser groups, and a warning forced users to wrap every
+deliberate aggregation in `suppressWarnings()`.)
 
 ```{r conversion_with_information_loss}
 spec_ids_1 <- as_fe_species_ger_nfi_2012(c("170", "150", "140"))
@@ -429,6 +550,20 @@ spec_ids_1 |> format("eng")
 # Backward ambiguous cast (possibly, but with information loss)
 spec_ids_2 <- as_fe_species_tum_wwk_short(spec_ids_1)
 spec_ids_2 |> format("eng")
+```
+
+Conversely, when casting *into* a hierarchical coding (one that offers
+both single-species and group codes, see
+[Section 2.2.2](#hierarchical_codings)), each species is resolved to the
+*finest* code available for it - the single-species code if there is one,
+the smallest containing group otherwise. This happens automatically and
+without information loss:
+
+```{r finest_node_cast_usage}
+# Pedunculate and sessile oak resolve to the single codes 54 and 55,
+# not to the group code 70
+as_fe_species_bavrn_state(fe_species_master(c("quercus_001", "quercus_002"))) |>
+  format("code")
 ```
 
 Conversions with no match in the goal coding terminate with an error:
@@ -455,6 +590,31 @@ spec_ids |> as_fe_species_ger_nfi_2012()
 
 # Similar
 as_fe_species_master(fe_species_ger_nfi_2012("90"))
+```
+
+There is one controlled exception to the forward-ambiguous error. A few
+source group codes genuinely straddle two groups of a goal coding, so
+there is no single matching target node, yet a sensible aggregate exists.
+For these cases the package ships a small, documented table,
+`species_cast_overrides`, that declares the deliberate target code. When
+such an override applies, the cast is carried out (lossily, with a
+message) instead of raising an error:
+
+```{r cast_override}
+species_cast_overrides
+
+# ger_nfi_2012 code 290 has no single match in tum_wwk_short, but the
+# override resolves it to code 8
+as_fe_species_tum_wwk_short(fe_species_ger_nfi_2012("290")) |> format("code")
+```
+
+Finally, a *non-tree* code (see [Section 2.2.3](#non_tree_codes)) has no
+tree-species equivalent in any goal coding, so it is resolved to `NA`
+(again with a message) rather than treated as a failed match:
+
+```{r non_tree_cast}
+as_fe_species_tum_wwk_short(fe_species_bavrn_state(c("10", "99"))) |>
+  unclass()
 ```
 
 Note that the operability of a species coding cast is checked for each
@@ -664,23 +824,28 @@ dat |>
 ```
 
 
-## 4. Informations for developers
+## 4. Information for developers
 
-Most prominently, in the context of species codes a developer of the
-package *ForestElementsR* will want to add a new species coding. A few things
-have to be done in order to make that work. We mention these work steps first,
-and detail on them below:
+There are two rather different developer tasks around species codings,
+and it helps to keep them apart:
 
-- If the coding contains new species, add them to the species master table
-- Add new species to the *fe_species_master* coding
-- Add the new coding to the *species_coding* tibble
-- Copy the R-source file of an existing coding and adapt it (easy!)
-- Add a species coding cast function to your new coding to the R-source file
-  of each other coding (easy!)
-- Document the new coding (easy!)
-- Add your new coding to the automated tests for species codings (not difficult)
-- **Never** touch the source file *fe_species_helper_functions.R* if you do not
-  *exactly* know what you are doing. 
+1. **Maintaining the *data* of the codings** - adding a species to the
+   master table, adding a code to an existing coding, fixing a name, or
+   building a "short" aggregation coding. This is now entirely
+   *CSV-driven*: a set of exported builder functions turns editable CSV
+   files into the validated package data, steered by two workbench
+   scripts in `data-raw/`. You edit CSV, you do not edit R code.
+   [Section 4.1](#dev_data) describes the layout, and
+   [Section 4.2](#dev_update) is a step-by-step recipe.
+
+2. **Adding a genuinely *new* coding** - this additionally needs a new
+   S3 (vctrs) class and the cast functions that connect it to all the
+   other codings. That part still lives in R source files and is
+   described in [Section 4.3](#dev_new_coding).
+
+Finally, [Section 4.4](#dev_never) repeats the standing warning never to
+touch `fe_species_helper_functions.R` without knowing *exactly* what you
+are doing.
 
 Before we get into the details, note that all species codings inherit from the
 *vctrs_vctr* class, which is provided by the package [*vctrs*](https://vctrs.r-lib.org/index.html):
@@ -695,68 +860,115 @@ fe_species_master("abies_004") |> class()
 
 While this does not allow for building species_coding super- and subclasses, 
 which would be an obvious feature for a system of species codings, it has a very convenient way of supporting casts between different classes. As this is a key requirement of our implementation, we decided to design a *vctrs* based 
-solution. But now, let's talk about the above-mentioned steps in somewhat more
-detail.
+solution.
+
+### 4.1 The data behind the codings {#dev_data}
+
+All coding data is generated from editable CSV files by exported builder
+functions; the package data objects (`species_master_table`,
+`species_codings`, `species_cast_overrides`) are the *output*, never
+edited directly.
+
+- **The master table** lives in `data-raw/species_master_table.csv`
+  (exactly six columns: *genus*, *species_no*, *deciduous_conifer*,
+  *name_sci*, *name_eng*, *name_ger*; one row per single species).
+  `master_template_csv()` writes a fresh snapshot, and
+  `master_table_from_csv()` reads it back with strict validation
+  (unique keys, lower-case genus, three-digit *species_no*, no NAs).
+
+- **Each coding** has its own CSV in `data-raw/codings/<coding>.csv`,
+  in the *species-indexed + `parent_code`* format. There is one row per
+  master species, plus extra declaration rows for group names. The key
+  columns are:
+    - *species_id* - the code assigned to that species. Leaving it
+      empty means "this species is not covered by the coding". Several
+      species sharing one *species_id* form a group.
+    - *parent_code* - the *species_id* of the coarser group that
+      contains this code. This is what makes a coding *hierarchical*; a
+      flat coding leaves *parent_code* empty throughout. The builder
+      derives the *level* column from the `parent_code` chains.
+    - *name_sci*, *name_eng*, *name_ger* - optional for a single-species
+      code (then inherited from the master), but required for a group
+      code (which has no master row).
+    - *master_name_\** and, for "short" codings, *agg_from_\** are
+      read-only reference columns to help while editing; the builder
+      ignores them.
+  Note there is **no** *is_tree* column to maintain: whether a code is a
+  tree code is *derived* from its master link (a code with no master
+  link, e.g. a "shrub" category, becomes a non-tree code automatically,
+  with a message).
+
+- `coding_template_from_master()` produces such a CSV (blank, or
+  prefilled from an existing coding), and `coding_table_from_template()`
+  turns the edited CSV into a validated coding table. It checks the
+  *laminarity* invariant (codes are nested or disjoint, never partially
+  overlapping), derives *level* and *is_tree*, and stores the rows in
+  canonical order. For a "short" aggregation coding it additionally
+  verifies, against the freshly built parent coding, that the coding is a
+  valid coarsening (every parent group maps to exactly one short code).
+  The parent/child pairs (`bavrn_state_short` &larr; `bavrn_state`,
+  `tum_wwk_short` &larr; `tum_wwk_long`) are registered internally.
+
+- **Cast overrides** are their own little CSV
+  (`data-raw/codings/cast_overrides.csv`), built and validated by
+  `cast_overrides_from_csv()` into the package object
+  `species_cast_overrides` (see [Section 3.3](#species_code_conversions)).
 
 
-### 4.1 Check for new species and add them to the species master table
+### 4.2 How to update the master table or an existing coding {#dev_update}
 
-If you plan to implement a new species coding, carefully check the [species 
-master table](#species_master_table) if there is any species in your coding
-which is not covered which is not listed in the master table, yet. If it is not,
-you can add it as a new row. Probably, the *genus* where your new species 
-belongs to is already present. In this case simply give your entry the desired
-*genus* name (always lowercase!) and use for the *species_no* entry the greatest
-existing species number plus one (always three digit character string with 
-leading zeroes). Fill the other field of the row with the correct species names
-and the *deciduous_conifer* information. In case, the required *genus* is not
-yet covered, introduce it to the table and give your entry the *species_no*
-'001'. Note that NA values are not allowed at all in the species master table.
+These are the day-to-day data tasks, both driven by a workbench script in
+`data-raw/` that is meant to be run **manually, block by block** (not
+`source()`d in one go - the first block can overwrite a CSV).
 
-However, you must by any means avoid to have the same species twice in the 
-species master table. Maybe, the species is listed, but under a different name
-than that you are used to. In this case, remember, you can choose different
-names in your specific coding table, as long as the link to the correct entry in 
-the species master table by *genus* and *species_no* is existing. If you feel
-a scientific name in the species master table is outdated or that colloquial
-names could be better chosen, please contact the maintainers of 
-*ForestElementsR* before making any changes.
+**To add or change a species in the master table**
+(`data-raw/species_master_table.R`):
 
+1. (Optional) run the snapshot step to refresh
+   `data-raw/species_master_table.csv` from the installed table.
+2. Edit the CSV: add or change rows (six columns, one row per species).
+   A new species in an existing genus gets the next free *species_no*; a
+   new genus starts at *001*.
+3. Run `master_table_from_csv()`, inspect, then `usethis::use_data()` and
+   reinstall the package so the coding builder sees the new master.
 
-### 4.2 Add new species to the coding fe_species_master
+**To add a code to a coding, fix a name, or build a short coding**
+(`data-raw/species_codings.R`):
 
-By definition, the coding [*fe_species_master*](#implemented_codings) is the 
-coding that mirrors the contents of the species master table. So, if you have
-added a new species to the master table, you must also add it to the coding. 
-Inside the tibble *species_codings*, access the *code_table* for the 
-*species_coding* *master* and add the species. See 
-[here](#species_specific_codings) for an explanation of the tibble 
-*species_codings* and its substructures.
-
-
-### 4.3 Add the new species coding to the tibble *species_codings*
-
-First, give your new coding a name which is short, but informative enough. See
-our examples [here](#implemented_ _codings). Add a new row to the tibble
-[*species_codings*](#species_specific_codings) and insert the name you chose in 
-the field *species_coding*. In the second field (*code_table*) insert a tibble
-with exactly the structure as explained in 
-[Section 2.2](#species_specific_codings). In the column *species_id* you must 
-provide your own codes (always character, even if they are numbers only). The
-link to the [species master table](#species_master_table) must be guaranteed
-with the entries in *genus* and *species_no*. All your species must be listed
-in the master table, but your coding is not required to cover all species of
-the master table. The species names in your code table may differ from those
-in the master table; when [displaying names](#display_options), those of your 
-code table are used. Note that no NAs at all are allowed in your code table.
-
-If you give the same *species_id* to several species in the code table, these
-species will be treated as a group. As species name in the code table, you must
-then use the same group name for all these species. Look into the existing 
-codings for examples, e.g. the species_ids 8, 9, and 10 in the coding *tum_wwk_short*.
+1. In the config block, set `coding_name` and `mode` (`"new"` starts a
+   blank CSV from the master; `"edit"` prefills from the installed
+   coding). The parent coding, if any, is resolved automatically.
+2. Run the generate block to (re)write `data-raw/codings/<coding>.csv`.
+3. Edit the CSV by hand following the rules in
+   [Section 4.1](#dev_data). For a short coding, use the *agg_from_\**
+   hint columns to keep all species of one parent group on the same code.
+4. Run the build-and-validate block. It builds the coding from the CSV
+   and reports its codes and any non-tree codes; an invalid laminarity
+   or coarsening fails here with a clear message.
+5. Run the full-rebuild block to regenerate the whole `species_codings`
+   object (parents before children), then `usethis::use_data()` and
+   reinstall. If the change affects a cast override, rerun
+   `data-raw/cast_overrides.R` as well.
+6. Run the tests with `devtools::test()` and a full `R CMD check`. Note
+   that the `data-raw` CSVs are excluded from the built package
+   (`.Rbuildignore`), so the test suite is deliberately written to work
+   *without* them - run the real check, not just `test_dir()` against a
+   loaded session.
 
 
-### 4.4 Copy the R-source file of an existing coding and adapt it {#adapt-source-file}
+### 4.3 Adding a brand-new coding {#dev_new_coding}
+
+A genuinely new coding needs two things. Its *data* is built exactly as
+in [Sections 4.1](#dev_data) and [4.2](#dev_update): add a new
+`data-raw/codings/<coding>.csv`, register the coding name in
+`data-raw/species_codings.R` (and, if the new coding is a "short"
+aggregation of an existing one, add a parent/child row to the internal
+aggregation registry). The builder takes care of *level*, *is_tree*, and
+non-tree codes automatically. What remains is the *code*: a vctrs S3
+class plus the cast functions that connect the new coding to every other
+coding. The remaining steps cover that code side.
+
+#### 4.3.1 Copy the R-source file of an existing coding and adapt it {#adapt-source-file}
 
 Now, you must provide the functions in order to make your new coding workable.
 While this sounds difficult, it is actually really easy. Before we explain how
@@ -819,7 +1031,7 @@ update are:
   casts between codings
   
   
-### 4.5 Add a species coding cast function to each other coding
+#### 4.3.2 Add a species coding cast function to each other coding
 
 In the previous step, you have placed a *vec_cast* function that casts 
 other codings into your new coding in the implementation of the new coding. Now,
@@ -831,7 +1043,7 @@ implementation of *fe_species_ger_nfi_2012* requires a function
 *vec_cast.fe_species_ger_nfi_2023.fe_species_john_doe_coding*, and so on.
 
 
-### 4.6 Document the new coding
+#### 4.3.3 Document the new coding
 
 Clearly, when implementing your new species coding by 
 [editing an existing source file](#adapt-source-file), you must adapt the
@@ -842,16 +1054,20 @@ Roxygen2 code. Add a short description and examples in the same style as you
 find it for the other codings.
 
 
-### 4.7 Add your new coding to the automated tests for species codings
+#### 4.3.4 Add your new coding to the automated tests for species codings
 
 The package ForestElementsR comprises a suite of automated tests. You must add
 your now coding also there. You find the implementations of the tests in the
-subdirectory */tests/testhat/*; the files you need are called 
-*test_species_coding_consistency*, and *test_species_coding_casts*. See how the
-tests for the other codings are implemented, and follow these examples.
+subdirectory */tests/testhat/*; the files you need are called
+*test_species_coding_consistency*, and *test_species_coding_casts*. Several
+tests also iterate over *all* codings (e.g. for canonical row order,
+completeness, name uniqueness, and non-tree handling); a new coding is
+picked up there automatically once it is part of `species_codings`.
+See how the tests for the other codings are implemented, and follow these
+examples.
 
 
-### 4.8 **Never** touch the source file *fe_species_helper_functions.R*
+### 4.4 **Never** touch the source file *fe_species_helper_functions.R* {#dev_never}
 
 The functions in the source file *fe_species_helper_functions.R* were very 
 carefully crafted, and they provide the common technical background for existing

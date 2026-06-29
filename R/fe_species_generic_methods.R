@@ -106,6 +106,135 @@ fe_species_get_coding_table <- function(coding) {
 
 
 
+#' Non-Tree Codes of a Species Coding
+#'
+#' Some species codings contain legal codes that do not correspond to a tree
+#' species and cannot be used in calculations (e.g. a "shrub" category). Such
+#' codes are flagged in the coding table with \code{is_tree = FALSE}. This
+#' function returns them for a given coding. If the coding table has no
+#' \code{is_tree} column (i.e. all of its codes denote tree species), an empty
+#' character vector is returned.
+#'
+#' @param coding A character string naming one of the supported codings (see
+#'   the data \code{\link{species_codings}})
+#'
+#' @return A \code{character} vector of the coding's non-tree \code{species_id}s
+#'   (empty if there are none)
+#'
+#' @export
+#'
+#' @examples
+#' fe_species_non_tree_codes("bavrn_state")
+#'
+fe_species_non_tree_codes <- function(coding) {
+  ct <- fe_species_get_coding_table(coding)
+  if (!("is_tree" %in% names(ct))) {
+    return(character(0))
+  }
+  unique(ct$species_id[!ct$is_tree])
+}
+
+
+
+#' Test Which Elements of a Species Code Vector Denote Tree Species
+#'
+#' Returns a logical vector indicating, for each element of an **fe_species**
+#' vector, whether its code denotes a tree species (\code{TRUE}) or a non-tree
+#' category such as a shrub (\code{FALSE}; see
+#' \code{\link{fe_species_non_tree_codes}}). \code{NA} codes yield \code{NA}.
+#'
+#' @param x An object of one of the supported \code{fe_species} classes
+#'
+#' @return A \code{logical} vector of the same length as \code{x}
+#'
+#' @export
+#'
+#' @examples
+#' spec_ids <- fe_species_bavrn_state(c("10", "60", "80"))
+#' fe_species_is_tree(spec_ids)
+#'
+fe_species_is_tree <- function(x) {
+  coding   <- fe_species_get_coding(x)
+  non_tree <- fe_species_non_tree_codes(coding)
+  v   <- vctrs::vec_data(x)
+  res <- !(v %in% non_tree)
+  res[is.na(v)] <- NA
+  res
+}
+
+
+
+#' Field Lookup Table of a Species Coding
+#'
+#' Produces a compact, field-usable lookup table for a species coding: **each
+#' code appears exactly once**, accompanied by the name of the species (or
+#' species group) it stands for. This is the view one would print as a coding
+#' key for field inventory work.
+#'
+#' This differs from the full coding table returned by
+#' \code{\link{fe_species_get_coding_table}}, which carries **one row per
+#' elementary species** (so a group code shows up several times, once per member
+#' species, and so do the leaf codes of a hierarchical coding). The field table
+#' is the view collapsed to the level of distinct codes.
+#'
+#' The names are taken from the coding itself (the \code{name_*} columns of the
+#' coding table), **not** from the \code{\link{species_master_table}}. This
+#' matters for group codes, which have no master-table entry, and for codings
+#' that use regional or otherwise coding-specific names. All three name columns
+#' (\code{name_sci}, \code{name_eng}, \code{name_ger}) are always returned,
+#' independent of the current \code{options("fe_spec_lang")} setting, so the
+#' table is ready for output in any language.
+#'
+#' The rows are returned in the coding's canonical order (by \code{level}, then
+#' by code), so the finest (leaf) codes come first and the coarser group codes
+#' follow. The columns \code{level} (0 = finest leaf, higher = coarser group)
+#' and \code{is_tree} (\code{FALSE} for non-tree categories such as a "shrub"
+#' code) are kept, as both are relevant in the field.
+#'
+#' Rendering this table into a nicely formatted, printable document (e.g. a PDF)
+#' is deliberately left to the downstream packages that already carry a document
+#' rendering toolchain (\pkg{FeNEU}, \pkg{FeNEUShiny}); \pkg{ForestElementsR}
+#' only provides the data.
+#'
+#' @param coding A character string naming one of the supported codings (see the
+#'   data \code{\link{species_codings}}), or the coding name obtained from an
+#'   existing **fe_species** object via \code{\link{fe_species_get_coding}}
+#'
+#' @return A \code{tibble} with one row per distinct code and the columns
+#'   \code{species_id}, \code{name_sci}, \code{name_eng}, \code{name_ger},
+#'   \code{level}, and \code{is_tree}
+#'
+#' @seealso \code{\link{fe_species_get_coding_table}},
+#'   \code{\link{fe_species_non_tree_codes}}
+#'
+#' @export
+#'
+#' @examples
+#' # Field key for the Bavarian state forest coding
+#' fe_species_get_field_table("bavrn_state")
+#'
+#' # Works for every implemented coding
+#' fe_species_get_field_table("tum_wwk_short")
+#'
+fe_species_get_field_table <- function(coding) {
+  ct <- fe_species_get_coding_table(coding)
+
+  # The coding table is stored in canonical order and the builder guarantees
+  # that the names, level, and is_tree are constant within a code, so keeping
+  # the first row per species_id yields the canonical, one-row-per-code view.
+  # The name_* columns come from the coding table (i.e. the coding's own names,
+  # including group names), never from the species master table.
+  ct |>
+    dplyr::distinct(.data$species_id, .keep_all = TRUE) |>
+    dplyr::select(
+      "species_id",
+      "name_sci", "name_eng", "name_ger",
+      "level", "is_tree"
+    )
+}
+
+
+
 #' Generic Formatted Output for **fe_species** Objects
 #'
 #' @param x Object of one of the supported \code{fe_species_} classes

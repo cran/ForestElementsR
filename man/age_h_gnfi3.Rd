@@ -63,9 +63,9 @@ alternatives. Fallback option is the attempt to use
 \insertAllCited{}
 }
 \seealso{
-Other growth functions: 
-\code{\link{age_d_gnfi3}()},
-\code{\link{d_age_gnfi3}()},
-\code{\link{h_age_gnfi3}()}
+Other growth functions:
+\code{\link[=age_d_gnfi3]{age_d_gnfi3()}},
+\code{\link[=d_age_gnfi3]{d_age_gnfi3()}},
+\code{\link[=h_age_gnfi3]{h_age_gnfi3()}}
 }
 \concept{growth functions}

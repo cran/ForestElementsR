@@ -143,7 +143,8 @@ test_that("volume calculation v_gri works for all species codings", {
 
 
   ## 2. Test species codings compatible with bavrn_state_short coding
-  spec_raw <- fe_species_get_coding_table("bavrn_state")$species_id |> unique()
+  ct_bvrn  <- fe_species_get_coding_table("bavrn_state")
+  spec_raw <- unique(ct_bvrn$species_id[ct_bvrn$is_tree]) # drop non-tree (e.g. 99)
   d_cm <- rep(30, times = length(spec_raw))
   h_m  <- rep(29, times = length(spec_raw))
 
